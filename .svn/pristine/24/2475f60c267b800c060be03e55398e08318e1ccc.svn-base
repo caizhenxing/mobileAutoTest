@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+<head th:include="include :: header"></head>
+<body class="gray-bg">
+	<div class="wrapper wrapper-content animated fadeInRight">
+		<div class="row">
+			<div class="col-sm-12">
+				<div class="ibox float-e-margins">
+					<div class="ibox-content">
+						<form class="form-horizontal m-t" id="svnCreateBranchEditForm">
+							<input id="id" name="id" th:value="${svnCreateBranchInfo.id}"
+								class="hidden">
+							<input id="svnRepoId" name="svnRepoId" th:value="${svnCreateBranchInfo.svnRepoId}"
+								class="hidden">
+							<!-- 所属产品机构 -->
+							<div class="form-group">
+								<label class="col-sm-3 control-label">所属产品机构：</label>
+								<div class="col-sm-8">
+									<input id="deptId" name="deptId" class="hidden" th:value="${svnCreateBranchInfo.deptId}">
+									<input id="deptName" name="deptName" class="form-control" type="text"
+										style="cursor: pointer;" th:value="${svnCreateBranchInfo.deptName}"
+										readonly="readonly" onclick="openDept()" placeholder="所属产品机构">
+								</div>
+							</div>
+							<div class="form-group">
+								<label class="col-sm-3 control-label">SVN仓库名称：</label>
+								<div class="col-sm-8">
+									<input id="svnRepoName" name="svnRepoName" th:value="${svnCreateBranchInfo.svnRepoName}"
+										class="form-control" type="text" readonly="readonly" >
+								</div>
+							</div>
+							<!-- 所属批次 -->
+							<div class="form-group">
+								<label class="col-sm-3 control-label">所属批次：</label>
+								<div class="col-sm-8">
+									<input id="batchId" name="batchId" class="hidden" th:value="${svnCreateBranchInfo.batchId}">
+									<input id="batchName" name="batchName" class="form-control" type="text"
+										style="cursor: pointer;" th:value="${svnCreateBranchInfo.batchName}"
+										readonly="readonly" onclick="openBatch()"  placeholder="选择所属批次">
+								</div>
+							</div>
+							<div class="form-group">
+								<label class="col-sm-3 control-label">SVN分支基线URL：</label>
+								<div class="col-sm-8">
+									<input id="svnTrunk" name="svnTrunk" th:value="${svnCreateBranchInfo.svnTrunk}" 
+										class="form-control" type="text" readonly="readonly" >
+								</div>
+							</div>
+							<div class="form-group">
+								<label class="col-sm-3 control-label">SVN新建的分支URL：</label>
+								<div class="col-sm-8">
+									<input id="newBranch" name="newBranch" th:value="${svnCreateBranchInfo.newBranch}"
+										class="form-control" type="text" readonly="readonly" >
+								</div>
+							</div>
+							<div class="form-group">
+								<label class="col-sm-3 control-label">SVN新建分支的备注信息：</label>
+								<div class="col-sm-8">
+									<input id="createBranchComment" name="createBranchComment" th:value="${svnCreateBranchInfo.createBranchComment}"
+										class="form-control" type="text">
+								</div>
+							</div>
+							<div class="form-group">
+								<div class="col-sm-8 col-sm-offset-3">
+									<button type="submit" class="btn btn-primary" id="submit">提交</button>
+								</div>
+							</div>
+							<div class="col-sm-8 col-sm-offset-3" id="showLoading"></div>
+						</form>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div th:include="include :: footer"></div>
+	<script type="text/javascript" src="/js/appjs/svn/svnCreateBranch/edit.js"></script>
+	</script>
+</body>
+</html>

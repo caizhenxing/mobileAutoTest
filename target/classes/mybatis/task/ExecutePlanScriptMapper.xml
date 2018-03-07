@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.bmtc.task.dao.ExecutePlanScriptDao">
+
+	<resultMap id="ExecutePlanScriptResultMap" type="com.bmtc.task.domain.ExecutePlanScriptDO" >
+		<id column="id" property="id" />
+		<result column="execute_plan_id" property="executePlanId" />
+		<result column="script_id" property="scriptId" />
+		<result column="checked_case_name" property="checkedCaseName" />
+	</resultMap>
+	
+	<select id="get" resultType="com.bmtc.task.domain.ExecutePlanScriptDO">
+		select
+		`id`,
+		`execute_plan_id`,
+		`script_id`,
+		`checked_case_name`
+		from test_execute_plan_script 
+		where 
+		id = #{value}
+	</select>
+	
+	<select id="getExecutePlanScript" resultMap="ExecutePlanScriptResultMap">
+		SELECT
+		`id`,
+		`execute_plan_id`,
+		`script_id`,
+		`checked_case_name`
+		FROM
+		test_execute_plan_script
+		WHERE
+		execute_plan_id = #{executePlanId}
+		and
+		script_id = #{scriptId}
+	</select>
+	
+	<select id="getExecutePlanScriptByExecutePlanId" resultMap="ExecutePlanScriptResultMap">
+		SELECT
+		`id`,
+		`execute_plan_id`,
+		`script_id`,
+		`checked_case_name`
+		FROM
+		test_execute_plan_script
+		WHERE
+		execute_plan_id = #{executePlanId}
+	</select>
+
+	<select id="getScript" resultType="com.bmtc.script.domain.Script">
+		SELECT *
+		FROM test_script ts
+		LEFT JOIN test_execute_plan_script tts 
+		ON ts.script_id = tts.script_id
+		LEFT JOIN test_execute_plan tt 
+		ON tt.id = tts.execute_plan_id
+		WHERE 
+		tt.id = #{execute_plan_id}
+	</select>
+	
+	<select id="list" resultType="com.bmtc.task.domain.ExecutePlanScriptDO">
+		select
+		`id`,
+		`execute_plan_id`,
+		`script_id`,
+		`checked_case_name`
+		from test_execute_plan_script
+		<where>
+			<if test="id != null and id != ''"> and id = #{id} </if>
+			<if test="executePlanId != null and executePlanId != ''"> and execute_plan_id = #{executePlanId} </if>
+			<if test="scriptId != null and scriptId != ''"> and script_id = #{scriptId} </if>
+			<if test="checkedCaseName != null and checkedCaseName != ''"> and checked_case_name = #{checkedCaseName} </if>
+		</where>
+ 		<choose>
+			<when test="sort != null and sort.trim() != ''">
+				order by ${sort} ${order}
+			</when>
+			<otherwise>
+				order by id desc
+			</otherwise>
+		</choose>
+		<if test="offset != null and limit != null">
+			limit #{offset}, #{limit}
+		</if>
+	</select>
+
+	<select id="count" resultType="int">
+		select count(*) from test_execute_plan_script
+		<where>
+			<if test="id != null and id != ''"> and id = #{id} </if>
+			<if test="executePlanId != null and executePlanId != ''"> and execute_plan_id = #{executePlanId} </if>
+			<if test="scriptId != null and scriptId != ''"> and script_id = #{scriptId} </if>
+			<if test="checkedCaseName != null and checkedCaseName != ''"> and checked_case_name = #{checkedCaseName} </if>
+		</where>
+	</select>
+
+	<insert id="save" parameterType="com.bmtc.task.domain.ExecutePlanScriptDO"
+		useGeneratedKeys="true" keyProperty="id">
+		insert into test_execute_plan_script
+		(
+		`execute_plan_id`,
+		`script_id`,
+		`checked_case_name`
+		)
+		values
+		(
+		#{executePlanId},
+		#{scriptId},
+		#{checkedCaseName}
+		)
+	</insert>
+
+	<update id="update" parameterType="com.bmtc.task.domain.ExecutePlanScriptDO">
+		update test_execute_plan_script
+		<set>
+			<if test="executePlanId != null">`execute_plan_id` = #{executePlanId}, </if>
+			<if test="scriptId != null">`script_id` = #{scriptId}</if>
+			<if test="checkedCaseName != null">`checked_case_name` = #{checkedCaseName}</if>
+		</set>
+		where execute_plan_id = #{id}
+	</update>
+
+	<delete id="remove">
+		delete from test_execute_plan_script where execute_plan_id = #{executePlanId}
+	</delete>
+
+</mapper>

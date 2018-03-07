@@ -1,0 +1,523 @@
+package com.bmtc.svn.controller;
+
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Logger;
+import org.apache.shiro.authz.annotation.RequiresPermissions;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import com.bmtc.common.annotation.Log;
+import com.bmtc.common.utils.PageUtils;
+import com.bmtc.common.utils.Query;
+import com.bmtc.common.utils.R;
+import com.bmtc.svn.domain.SvnInfo;
+import com.bmtc.svn.domain.SvnRepo;
+import com.bmtc.svn.domain.SvnUser;
+import com.bmtc.svn.domain.SvnUserRepoInfo;
+import com.bmtc.svn.service.SvnRepoService;
+import com.bmtc.svn.service.SvnService;
+import com.bmtc.svn.service.SvnUserService;
+import com.bmtc.svn.common.entity.PushMsg;
+import com.bmtc.svn.common.web.BaseController;
+
+import org.tmatesoft.svn.core.SVNException;
+
+
+/**
+ * svn用户管理前端接口处理
+ * @author lpf7161
+ *
+ */
+@RequestMapping("/svn/svnUser")
+@Controller
+public class SvnUserController extends BaseController {
+	private static Logger logger = Logger.getLogger(SvnUserController.class);
+	
+	@Autowired
+	private SvnUserService svnUserService;
+	
+	@Autowired
+	private SvnRepoService svnRepoService;
+	
+	@Autowired
+	private SvnService svnService;
+	
+	String prefix = "svn/svnUser";
+	
+	//@RequiresPermissions("svn:user")
+	@Log("跳转到svn用户界面")
+	@GetMapping("")
+	String svnUser() {
+		return prefix + "/svnUser";
+	}
+	
+	/**
+	 * 参数检查
+	 * @param svnUser
+	 * @return PushMsg
+	 */
+	private PushMsg checkSvnUserParam(SvnUserRepoInfo svnUserRepoInfo) {
+		logger.info("SvnUserController.checkSvnUserParam() start");
+		//校验参数
+		if (svnUserRepoInfo == null) {
+			logger.error("svnUserRepoInfo is null");
+			return pushMsg("请求输入参数", false);
+		}
+		if (StringUtils.isEmpty(svnUserRepoInfo.getSvnRepoName())) {
+			logger.error("svnRepoName is null");
+			return pushMsg("请求输入svnRepoName参数", false);
+		}
+		if (StringUtils.isEmpty(svnUserRepoInfo.getSvnUserName())) {
+			logger.error("svnUserName is null");
+			return pushMsg("请求输入svnUserName参数", false);
+		}
+		if (StringUtils.isEmpty(svnUserRepoInfo.getSvnPassword())) {
+			logger.error("svnPassword is null");
+			return pushMsg("请求输入svnPassword参数", false);
+		}
+		logger.info("SvnUserController.checkSvnUserParam() end");
+		return pushMsg("参数校验成功", true);
+	} 
+	
+	
+	
+	//@RequiresPermissions("svn:svnUser:passTest")
+	@Log("测试svn联通性")
+	@GetMapping("/passTest/{svnUserName}/{svnRepoName}")
+	String passTest(Model model, @PathVariable("svnUserName") String svnUserName, 
+			@PathVariable("svnRepoName") String svnRepoName) {
+		logger.info("SvnUserController.passTest() start");
+		
+		SvnInfo svnInfo = new SvnInfo();
+		//准备数据
+		svnInfo.setSvnUserName(svnUserName);
+		svnInfo.setSvnRepoName(svnRepoName);
+		SvnRepo svnRepo = svnRepoService.querySvnRepoBySvnRepoName(svnRepoName);
+		svnInfo.setSvnRepoUrl(svnRepo.getSvnRepoUrl());
+		model.addAttribute("svnInfo", svnInfo);
+		logger.info("SvnUserController.passTest() end");
+		return prefix + "/passTest";
+	}
+
+	
+	@RequiresPermissions("svn:svnUser:addSvnUser")
+	@Log("添加svn用户")
+	@GetMapping("/add/{svnRepoName}")
+	String add(Model model, @PathVariable("svnRepoName") String svnRepoName) {
+		logger.info("SvnUserController.add() start");
+		SvnRepo svnRepo = svnRepoService.querySvnRepoBySvnRepoName(svnRepoName);
+		model.addAttribute("svnRepo", svnRepo);
+		logger.info("SvnUserController.add() end");
+		return prefix+"/addSvnUser";
+	}
+	
+	/**
+	 * @param svnUser
+	 * @return PushMsg
+	 * @throws SVNException
+	 */
+	@RequiresPermissions("svn:svnUser:add")
+	@Log("新增svn用户")
+	@PostMapping("/addSvnUser")
+	@ResponseBody
+	public Object addSvnUser(SvnUserRepoInfo svnUserRepoInfo) throws SVNException {
+		logger.info("SvnUserController.addSvnUser() start");
+		//校验参数
+		PushMsg pmg = checkSvnUserParam(svnUserRepoInfo);
+		if (!pmg.getStatus())
+		{
+			logger.error("svnUserRepoInfo is null");
+			return R.error(-1, "svnUserRepoInfo is null");
+		}
+		
+		//根据svn仓库名查询svn仓库id
+		String svnRepoIdStr = svnRepoService.querySvnRepoIdBySvnRepoName(svnUserRepoInfo.getSvnRepoName());
+		
+		long svnRepoId = 0;
+		if("".equals(svnRepoIdStr) || svnRepoIdStr == null) {
+			
+			logger.error("svn_repo数据表中不存在svn仓库名为'" + svnUserRepoInfo.getSvnRepoName() + "'的记录");
+			return R.error(-1, "svn_repo数据表中不存在svn仓库名为'" 
+					+ svnUserRepoInfo.getSvnRepoName() + "'的记录");
+		} else {
+			svnRepoId = Long.parseLong(svnRepoIdStr);		
+		}
+		
+		SvnUser svnUser = new SvnUser();
+		svnUser.setSvnUserName(svnUserRepoInfo.getSvnUserName());
+		svnUser.setSvnPassword(svnUserRepoInfo.getSvnPassword());
+		svnUser.setStatus(svnUserRepoInfo.getUserStatus());
+		svnUser.setSvnRepoId(svnRepoId);
+		
+		//添加SVN用户
+		int res = 0;
+		res = svnUserService.addSvnUser(svnUser);		
+
+		if(res == 0) {
+			logger.info("svn_user表中已存在svn用户名为'" + svnUser.getSvnUserName() 
+					+ "', 库名为'" + svnUserRepoInfo.getSvnRepoName() + "'的记录");
+			return R.error(-1, "svn_user表中已存在svn用户名为'" + svnUser.getSvnUserName() 
+					+ "', 库名为'" + svnUserRepoInfo.getSvnRepoName() + "'的记录");
+		} else {
+			logger.info("添加" + res + "条SVN用户完成");		
+		}
+		
+		// 操作passwd和authz文件，修改svn用户和权限配置
+		try {
+			svnService.exportConfig(svnUserRepoInfo.getSvnRepoName());
+		} catch (Exception e) {
+			return R.error(-1, e.getMessage());
+		}
+		
+		logger.info("SvnUserController.addSvnUser() end");
+		return R.ok();
+	}
+	
+
+	/**
+	 * @param svnUserName, svnRepoName
+	 * @return PushMsg
+	 * @throws SVNException
+	 */
+	@RequiresPermissions("svn:svnUser:del")
+	@Log("删除svn用户")
+	@GetMapping("/deleteSvnUser")
+	@ResponseBody
+	public Object deleteSvnUser(@RequestParam String svnUserName, @RequestParam String svnRepoName) throws SVNException {
+		logger.info("SvnUserController.deleteSvnUser() start");
+		
+		//校验参数
+		if (StringUtils.isEmpty(svnUserName))
+		{
+			logger.error("svnUserName is null");
+			return R.error(-1, "请求输入svnUserName参数");
+		}
+		if (StringUtils.isEmpty(svnRepoName))
+		{
+			logger.error("svnRepoName is null");
+			return R.error(-1, "请求输入svnRepoName参数");
+		}
+
+		//根据svnUserName和svnRepoName删除SVN用户
+		int res = 0;
+		res = svnUserService.deleteSvnUser(svnUserName, svnRepoName);
+		if(res == 0) {
+			logger.info("svn_user表中不存在svn用户名为'" + svnUserName + "', 库名为'" + svnRepoName + "'的记录");
+			return R.error(-1, "svn_user表中不存在svn用户名为'" + svnUserName + "', 库名为'" + svnRepoName + "'的记录");
+		} else {
+			logger.info("根据svnUserName和svnRepoName删除" + res + "条SVN用户完成");
+		}
+		
+		// 操作passwd和authz文件，修改svn用户和权限配置
+		try {
+			svnService.exportConfig(svnRepoName);
+		} catch (Exception e) {
+			return R.error(-1, e.getMessage());
+		}
+		
+		logger.info("SvnUserController.deleteSvnUser() end");
+		return R.ok();
+	}
+	
+	
+	/**
+	 * @param svnUserName
+	 * @return PushMsg
+	 * @throws SVNException
+	 */
+	@RequestMapping(value = "/deleteSvnUserBySvnUserName")
+	@ResponseBody
+	public Object deleteSvnUserBySvnUserName(@RequestParam String svnUserName) throws SVNException {
+		logger.info("SvnUserController.deleteSvnUserBySvnUserName() start");
+		PushMsg pmg = new PushMsg();
+		
+		//校验参数
+		if (StringUtils.isEmpty(svnUserName))
+		{
+			logger.error("svnUserName is null");
+			pmg = pushMsg("请求输入svnUserName参数", false);
+			return pmg;
+		}
+		
+		pmg = pushMsg("参数校验成功", true);
+		
+		//根据svnUserName删除SVN用户
+		int res = 0;
+		res = svnUserService.deleteSvnUserBySvnUserName(svnUserName);	
+		if(res == 0) {
+			logger.info("svn_user表中不存在svn用户名为'" + svnUserName + "'的记录");
+			pmg = pushMsg("svn_user表中不存在svn用户名为'" + svnUserName + "'的记录", false);
+			return pmg;
+		} else {
+			logger.info("根据svnUserName删除" + res + "条SVN用户完成");
+		}
+		pmg.setResult(res);
+		logger.info("SvnUserController.deleteSvnUserBySvnUserName() end");
+		return pmg;
+	}
+	
+	/**
+	 * @param svnUser
+	 * @return PushMsg
+	 * @throws SVNException
+	 */
+	@RequiresPermissions("svn:svnUser:resetPwd")
+	@Log("更新svn用户信息")
+	@PostMapping("/updateSvnUser")
+	@ResponseBody
+	public Object updateSvnUser(SvnUserRepoInfo svnUserRepoInfo) throws SVNException {	
+		logger.info("SvnUserController.updateSvnUser() start");
+		//校验参数
+		PushMsg pmg = checkSvnUserParam(svnUserRepoInfo);
+		if (!pmg.getStatus())
+		{
+			logger.error("svnUserRepoInfo is null");
+			return R.error(-1, "svnUserRepoInfo is null");
+		}
+		
+		//根据svn仓库名查询svn仓库id
+		String svnRepoIdStr = svnRepoService.querySvnRepoIdBySvnRepoName(svnUserRepoInfo.getSvnRepoName());
+		
+		long svnRepoId = 0;
+		if("".equals(svnRepoIdStr) || svnRepoIdStr == null) {
+			
+			logger.error("svn_repo数据表中不存在svn仓库名为'" + svnUserRepoInfo.getSvnRepoName() + "'的记录");
+			return R.error(-1, "svn_repo数据表中不存在svn仓库名为'" 
+					+ svnUserRepoInfo.getSvnRepoName() + "'的记录");
+		} else {
+			svnRepoId = Long.parseLong(svnRepoIdStr);		
+		}
+		
+		SvnUser svnUser = new SvnUser();
+		svnUser.setSvnUserName(svnUserRepoInfo.getSvnUserName());
+		svnUser.setSvnPassword(svnUserRepoInfo.getSvnPassword());
+		svnUser.setStatus(svnUserRepoInfo.getUserStatus());
+		svnUser.setSvnRepoId(svnRepoId);
+		
+		//根据SVN用户名和库名修改SVN用户
+		int res = 0;
+		res = svnUserService.updateSvnUser(svnUser);
+		if(res == 0) {
+			logger.info("svn_user表中不存在svn用户名为'" + svnUser.getSvnUserName() 
+					+ "', 仓库名为'" + svnUserRepoInfo.getSvnRepoName() + "'的记录");
+			return R.error(-1, "svn_user表中不存在svn用户名为'" + svnUser.getSvnUserName() 
+					+ "', 仓库名为'" + svnUserRepoInfo.getSvnRepoName() + "'的记录");
+		} else {
+			logger.info("根据svnUserName和svnRepoName修改" + res + "条SVN用户完成");
+		}
+		
+		// 操作passwd和authz文件，修改svn用户和权限配置
+		try {
+			svnService.exportConfig(svnUserRepoInfo.getSvnRepoName());
+		} catch (Exception e) {
+			return R.error(-1, e.getMessage());
+		}
+		
+		logger.info("SvnUserController.updateSvnUser() end");
+		return R.ok();
+	}
+	
+	
+	/**
+	 * @param svnUser
+	 * @return PushMsg
+	 * @throws SVNException
+	 */
+	@RequestMapping(value = "/saveSvnUser")
+	@ResponseBody
+	public Object saveSvnUser(@RequestBody SvnUserRepoInfo svnUserRepoInfo) throws SVNException {
+		logger.info("SvnUserController.saveSvnUser() start");
+		//校验参数
+		PushMsg pmg = checkSvnUserParam(svnUserRepoInfo);
+		if (!pmg.getStatus())
+		{
+			logger.error("svnUserRepoInfo is null");
+			return pmg;
+		}
+		
+		//根据svn仓库名查询svn仓库id
+		String svnRepoIdStr = svnRepoService.querySvnRepoIdBySvnRepoName(svnUserRepoInfo.getSvnRepoName());
+		
+		long svnRepoId = 0;
+		if("".equals(svnRepoIdStr) || svnRepoIdStr == null) {
+			
+			logger.error("svn_repo数据表中不存在svn仓库名为'" + svnUserRepoInfo.getSvnRepoName() + "'的记录");
+			pmg = pushMsg("svn_repo数据表中不存在svn仓库名为'" + svnUserRepoInfo.getSvnRepoName() + "'的记录", false);
+			
+			return pmg;
+		} else {
+			svnRepoId = Long.parseLong(svnRepoIdStr);		
+		}
+		
+		
+		SvnUser svnUser = new SvnUser();
+		svnUser.setSvnUserName(svnUserRepoInfo.getSvnUserName());
+		svnUser.setSvnPassword(svnUserRepoInfo.getSvnPassword());
+		svnUser.setStatus(svnUserRepoInfo.getUserStatus());
+		svnUser.setSvnRepoId(svnRepoId);
+		
+		//添加SVN用户
+		int res = 0;
+		res = svnUserService.saveSvnUser(svnUser);
+		if(res == 0) {
+			logger.error("添加或者修改SVN用户异常");
+			pmg = pushMsg("添加或者修改SVN用户异常", false);
+			return pmg;
+		} else {
+			logger.info("添加或者修改" + res + "条SVN用户完成");
+		}
+
+		// 操作passwd和authz文件，修改svn用户和权限配置
+		try {
+			svnService.exportConfig(svnUserRepoInfo.getSvnRepoName());
+		} catch (Exception e) {
+			return R.error(-1, e.getMessage());
+		}
+		
+		pmg.setResult(res);
+		logger.info("SvnUserController.saveSvnUser() end");
+		return pmg;
+	}
+	
+	
+	
+	/**
+	 * @param svnUserName, svnRepoName
+	 * @return SvnUser
+	 * @throws SVNException
+	 */
+	@RequestMapping(value = "/querySvnUser")
+	@ResponseBody
+	public Object querySvnUser(@RequestParam String svnUserName, @RequestParam String svnRepoName) throws SVNException {
+		logger.info("SvnUserController.querySvnUser() start");
+		PushMsg pmg = new PushMsg();
+		
+		//校验参数
+		if (StringUtils.isEmpty(svnUserName))
+		{
+			logger.info("svnUserName is null");
+			pmg = pushMsg("请求输入svnUserName参数", false);
+			return pmg;
+		}
+		if (StringUtils.isEmpty(svnRepoName))
+		{
+			logger.info("svnRepoName is null");
+			pmg = pushMsg("请求输入svnRepoName参数", false);
+			return pmg;
+		}
+		
+		pmg = pushMsg("参数校验成功", true);
+		
+		//根据svnUserName和svnRepoName查询SVN用户
+		SvnUserRepoInfo svnUser = svnUserService.querySvnUser(svnUserName, svnRepoName);
+		if(svnUser == null) {
+			logger.error("svn_user数据表中不存在svn用户名为" + svnUserName + ",svn仓库名为'" + svnRepoName + "'的记录");
+			pmg = pushMsg("svn_user数据表中不存在svn用户名为" + svnUserName + ",svn仓库名为'" + svnRepoName + "'的记录", false);
+			return pmg;
+		}
+		logger.info("查询SVN用户信息完成");
+		logger.info("SvnUserController.querySvnUser() end");
+		return svnUser;
+	}
+	
+	
+	@RequiresPermissions("svn:svnUser:query")
+	@Log("查询svn用户信息")
+	@GetMapping("/querySVN")
+	String querySVN() {
+		return prefix + "/query";
+	}
+	
+	/**
+	 * @param svnUserName(可为空), svnRepoName(可为空)
+	 * @return pageUtil
+	 * @throws SVNException
+	 */
+	@RequiresPermissions("svn:svnUser:query")
+	@Log("查询svn用户信息")
+	@GetMapping("/query")
+	@ResponseBody
+	public PageUtils querySvnUser(@RequestParam Map<String, Object> params) {
+		logger.info("SvnUserController.querySvnUser() start");
+		// 分页查询参数数据
+		Query query = new Query(params);
+		
+		//根据svnUserName(可为空)和svnRepoName(可为空)查询SVN用户
+		List<SvnUserRepoInfo> list = svnUserService.query(query);	
+		// 查询总记录数
+		int total = svnUserService.countSvnUser(query);
+		// 封装到返回对象
+		PageUtils pageUtil = new PageUtils(list, total);
+		logger.info("SvnUserController.querySvnUser() end");
+		// 返回数据
+		return pageUtil;
+	}
+	
+	
+	/**
+	 * @param svnUserName
+	 * @return List<SvnUser>
+	 * @throws SVNException
+	 */
+/*	@RequestMapping(value = "/querySvnUserBySvnUserName")
+	@ResponseBody
+	public Object querySvnUserBySvnUserName(@RequestParam String svnUserName) throws SVNException {
+		PushMsg pmg = new PushMsg();
+		
+		//校验参数
+		if (StringUtils.isEmpty(svnUserName))
+		{
+			logger.info("svnUserName is null");
+			pmg = pushMsg("请求输入svnUserName参数", false);
+			return pmg;
+		}
+		
+		pmg = pushMsg("参数校验成功", true);
+		
+		//根据svnUserName查询SVN用户
+		List<SvnUserRepoInfo> list = svnUserService.querySvnUserBySvnUserName(svnUserName);	
+		logger.info("根据svnUserName查询SVN用户完成");
+		
+		return list;
+	}*/
+	
+	/**
+	 * @param svnUserName
+	 * @return List<SvnUser>
+	 * @throws SVNException
+	 */
+	
+	@GetMapping("/querySvnUserBySvnUserName")
+	@ResponseBody
+	PageUtils querySvnUserBySvnUserName(@RequestParam Map<String, Object> params) {
+		logger.info("SvnUserController.querySvnUserBySvnUserName() start");
+		//校验参数
+		if(!params.containsKey("svnUserName") || params.get("svnUserName").equals(null)){
+			logger.error("svnUserName is null");
+			return null;
+		}
+		// 分页查询参数数据
+		Query query = new Query(params);
+		
+		//根据svnUserName查询SVN用户
+		List<SvnUserRepoInfo> list = svnUserService.querySvnUserBySvnUserName(query);	
+		// 查询总记录数
+		int total = svnUserService.countSvnUserBySvnUserName(query);
+		// 封装到返回对象
+		PageUtils pageUtil = new PageUtils(list, total);
+		logger.info("SvnUserController.querySvnUserBySvnUserName() end");
+		// 返回数据
+		return pageUtil;
+	}
+	
+}

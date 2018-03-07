@@ -1,0 +1,59 @@
+bmtc:
+    uploadPath: D:/var/uploaded_files/
+    # 查询设备状态的接口地址
+    deviceInfoAdd : http://22.11.27.29/bmtc/all/android/info
+    # 执行测试计划的接口地址
+    executeAdd : http://22.11.27.29/bmtc/android/run/case
+    # svn库地址的url
+    url : svn://22.11.31.36/automation_test/branches
+    # 下载脚本需要登录的用户名
+    username : wy_maxl
+    # 下载脚本需要登录的密码
+    password : 123456
+    # 下载到本地的路径wcPath
+    localPath : /Users/Shared/testScriptData
+    # svn配置文件(authz, passwd, svnserve.conf)在本地的存放位置
+    svnConfFilesLocation : /Users/bocmt004/.jenkins/workspace/BMTC/confFile
+    # svn服务器的用户名
+    svnServerUserName : root
+    # svn服务器登录口令
+    svnServerPassword : Pass_01!
+    # svn超级用户的用户名
+    svnRootUserName : admin
+    # 远程连接端口号
+    port : 22
+logging:
+  level:
+    com.bmtc: debug
+jasypt:
+ encryptor:
+   password: e9fbdb2d3b21
+spring:
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driverClassName: com.mysql.jdbc.Driver
+    url: jdbc:mysql://22.11.31.35:3306/bmtc?useUnicode=true&characterEncoding=utf8
+    username: root
+    password: ENC(DiuuMRuwsrGAg9iBHcTlUQ==)
+    initialSize: 1
+    minIdle: 3
+    maxActive: 20
+    # 配置获取连接等待超时的时间
+    maxWait: 60000
+    # 配置间隔多久才进行一次检测，检测需要关闭的空闲连接，单位是毫秒
+    timeBetweenEvictionRunsMillis: 60000
+    # 配置一个连接在池中最小生存的时间，单位是毫秒
+    minEvictableIdleTimeMillis: 30000
+    validationQuery: select 'x'
+    testWhileIdle: true
+    testOnBorrow: false
+    testOnReturn: false
+    # 打开PSCache，并且指定每个连接上PSCache的大小
+    poolPreparedStatements: true
+    maxPoolPreparedStatementPerConnectionSize: 20
+    # 配置监控统计拦截的filters，去掉后监控界面sql无法统计，'wall'用于防火墙
+    filters: stat,wall,slf4j
+    # 通过connectProperties属性来打开mergeSql功能；慢SQL记录
+    connectionProperties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000
+    # 合并多个DruidDataSource的监控数据
+    #useGlobalDataSourceStat: true

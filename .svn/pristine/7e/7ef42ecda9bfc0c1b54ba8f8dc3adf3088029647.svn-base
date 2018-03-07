@@ -1,0 +1,159 @@
+package com.bmtc.system.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+
+
+/**
+ * 部门管理
+ * 
+ * @author chglee
+ * @email 1992lcg@163.com
+ * @date 2017-09-27 14:28:36
+ */
+public class DeptDO implements Serializable {
+	private static final long serialVersionUID = 1L;
+	
+	//
+	private Long deptId;
+	//上级部门ID，一级部门为0
+	private Long parentId;
+	//机构英文名称
+	private String name;
+	//机构中文名称
+	private String chineseName;
+	//排序
+	private Integer orderNum;
+	//是否删除  -1：已删除  0：正常
+	private Integer delFlag;
+	//部门等级
+	private Integer organLevel;
+	//查找key
+	private String findkey;
+	//创建者
+	private Integer createUser;
+	//创建时间
+	private Date createDate;
+	//修改时间
+	private Date modifyDate;
+	//修改者
+	private Integer modifyUser;
+	//删除状态
+	private byte deleted;
+	//
+	private Integer sequence;
+	//
+	private Integer organType;
+	//svn路径
+	private String svnName;
+	public Long getDeptId() {
+		return deptId;
+	}
+	public void setDeptId(Long deptId) {
+		this.deptId = deptId;
+	}
+	public Long getParentId() {
+		return parentId;
+	}
+	public void setParentId(Long parentId) {
+		this.parentId = parentId;
+	}
+	public String getName() {
+		return name;
+	}
+	public void setName(String name) {
+		this.name = name;
+	}
+	public String getChineseName() {
+		return chineseName;
+	}
+	public void setChineseName(String chineseName) {
+		this.chineseName = chineseName;
+	}
+	public Integer getOrderNum() {
+		return orderNum;
+	}
+	public void setOrderNum(Integer orderNum) {
+		this.orderNum = orderNum;
+	}
+	public Integer getDelFlag() {
+		return delFlag;
+	}
+	public void setDelFlag(Integer delFlag) {
+		this.delFlag = delFlag;
+	}
+	public Integer getOrganLevel() {
+		return organLevel;
+	}
+	public void setOrganLevel(Integer organLevel) {
+		this.organLevel = organLevel;
+	}
+	public String getFindkey() {
+		return findkey;
+	}
+	public void setFindkey(String findkey) {
+		this.findkey = findkey;
+	}
+	public Integer getCreateUser() {
+		return createUser;
+	}
+	public void setCreateUser(Integer createUser) {
+		this.createUser = createUser;
+	}
+	public Date getCreateDate() {
+		return createDate;
+	}
+	public void setCreateDate(Date createDate) {
+		this.createDate = createDate;
+	}
+	public Date getModifyDate() {
+		return modifyDate;
+	}
+	public void setModifyDate(Date modifyDate) {
+		this.modifyDate = modifyDate;
+	}
+	public Integer getModifyUser() {
+		return modifyUser;
+	}
+	public void setModifyUser(Integer modifyUser) {
+		this.modifyUser = modifyUser;
+	}
+	public byte getDeleted() {
+		return deleted;
+	}
+	public void setDeleted(byte deleted) {
+		this.deleted = deleted;
+	}
+	public Integer getSequence() {
+		return sequence;
+	}
+	public void setSequence(Integer sequence) {
+		this.sequence = sequence;
+	}
+	public Integer getOrganType() {
+		return organType;
+	}
+	public void setOrganType(Integer organType) {
+		this.organType = organType;
+	}
+	public String getSvnName() {
+		return svnName;
+	}
+	public void setSvnName(String svnName) {
+		this.svnName = svnName;
+	}
+	@Override
+	public String toString() {
+		return "DeptDO [deptId=" + deptId + ", parentId=" + parentId
+				+ ", name=" + name + ", chineseName=" + chineseName
+				+ ", orderNum=" + orderNum + ", delFlag=" + delFlag
+				+ ", organLevel=" + organLevel + ", findkey=" + findkey
+				+ ", createUser=" + createUser + ", createDate=" + createDate
+				+ ", modifyDate=" + modifyDate + ", modifyUser=" + modifyUser
+				+ ", deleted=" + deleted + ", sequence=" + sequence
+				+ ", organType=" + organType + ", svnName=" + svnName + "]";
+	}
+	
+
+}

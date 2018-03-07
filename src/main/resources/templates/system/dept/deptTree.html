@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+
+<meta charset="utf-8">
+<head th:include="include :: header"></head>
+
+<body class="gray-bg">
+	<div  class="wrapper wrapper-content animated fadeInRight">
+
+		<div class="row">
+			<div class="col-sm-12">
+
+				<div class="ibox-content">
+					<div id="deptTree"></div>
+				</div>
+				<div class="form-group " >
+					<div class="col-sm-12 col-sm-offset-12" style="z-index: 900; position: fixed; right: 210px;top: 360px;" >
+						<button type="button" class="btn btn-primary" onclick="setProductIds()" >提交</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div th:include="include :: footer"></div>
+
+
+
+	<script type="text/javascript">
+	var productIds ;
+	var productNames=""
+		$(document).ready(function() {
+			getTreeData()
+		});
+		function getTreeData() {
+			$.ajax({
+				type : "GET",
+				url : "/system/sysDept/tree",
+				success : function(tree) {
+					loadTree(tree);
+				}
+			});
+		}
+		function loadTree(tree) {
+			$('#deptTree').jstree({
+				'core' : {
+					'data' : tree
+				},
+				"checkbox" : {
+					"three_state" : true,
+				},
+				"plugins" : [ "wholerow", "checkbox" ]
+			});
+			$('#deptTree').jstree().close_all();
+		}
+		
+		function setProductIds() {
+			getAllSelectNodes();
+			parent.loadDept(productIds,productNames);
+			var index = parent.layer.getFrameIndex(window.name); // 获取窗口索引
+			parent.layer.close(index);
+		}
+		
+		 function getAllSelectNodes() {
+			var ref = $('#deptTree').jstree(true); // 获得整个树
+			productIds = ref.get_selected();
+			products = ref.get_selected(true);// 获得所有选中节点的，返回值为数组
+			for (var int = 0; int < productIds.length; int++) {
+				var productName = ref.get_text(productIds[int])
+			productNames +=productName+"  "
+			}
+		} 
+		 
+		
+	</script>
+</body>
+
+</html>

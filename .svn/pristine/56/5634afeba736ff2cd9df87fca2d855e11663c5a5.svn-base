@@ -1,0 +1,384 @@
+package com.bmtc.svn.service.impl;
+
+import java.io.BufferedWriter;
+import java.io.File;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.bmtc.svn.common.utils.EncryptUtil;
+import com.bmtc.svn.common.utils.ReadFileToString;
+import com.bmtc.svn.common.utils.TimeUtils;
+import com.bmtc.svn.dao.SvnRepoDao;
+import com.bmtc.svn.dao.SvnUserDao;
+import com.bmtc.svn.dao.SvnUserRightDao;
+import com.bmtc.svn.domain.SvnRepo;
+import com.bmtc.svn.domain.SvnUser;
+import com.bmtc.svn.domain.SvnUserAuthzInfo;
+import com.bmtc.svn.service.SvnService;
+
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+
+import org.apache.commons.lang.StringUtils;
+
+
+
+/**
+ * SVN用户信息管理业务逻辑实现
+ * 导出svn配置信息服务层
+ * @author lpf7161
+ *
+ */
+@Service("SvnService")
+public class SvnServiceImpl implements SvnService {
+	private static Logger logger = Logger.getLogger(SvnServiceImpl.class);
+	
+	@Autowired
+	private SvnUserDao svnUserDao;
+	
+	@Autowired
+	private SvnRepoDao svnRepoDao;
+
+	@Autowired
+	private SvnUserRightDao svnUserRightDao;
+	
+	/**
+	 * 分隔符
+	 */
+	private static final String SEP = System.getProperty("line.separator");
+
+	/**
+	 * 导出到配置文件
+	 * 
+	 * @param svnRepoName
+	 *            项目名
+	 * @throws Exception 
+	 */
+	@Override
+	public void exportConfig(String svnRepoName) throws Exception {
+		logger.info("SvnServiceImpl.exportConfig() start");
+		SvnRepo svnRepo = svnRepoDao.querySvnRepoBySvnRepoName(svnRepoName);
+		try {
+			this.exportConfig(svnRepo);
+		} catch(Exception e) {
+			throw new Exception(e.getMessage());
+		}
+
+		logger.info("SvnServiceImpl.exportConfig() end");
+	}
+
+	/**
+	 * 导出到配置文件
+	 * 
+	 * @param svnRepo
+	 *            项目
+	 * @throws Exception 
+	 */
+	@Override
+	public void exportConfig(SvnRepo svnRepo) throws Exception {
+		logger.info("SvnServiceImpl.exportConfig() start");
+		if (svnRepo == null) {
+			return;
+		}
+		File parent = new File(svnRepo.getSvnRepoPath());
+		if (!parent.exists() || !parent.isDirectory()) {
+			logger.error("svn.notFoundResp, 找不到仓库路径:" + svnRepo.getSvnRepoPath());
+			throw new Exception("svn.notFoundResp, 找不到仓库路径:" + svnRepo.getSvnRepoPath());		
+		}
+		// SVN
+		try {
+			this.exportSVN(svnRepo);
+		} catch (Exception e) {
+			throw new Exception(e.getMessage());
+		}
+
+		logger.info("SvnServiceImpl.exportConfig() end");
+	}
+
+	/**
+	 * 导出svn协议的配置信息
+	 * 
+	 * @param svnRepo
+	 *            项目
+	 * @throws Exception 
+	 */
+	@Override
+	public void exportSVN(SvnRepo svnRepo) throws Exception {
+		logger.info("SvnServiceImpl.exportSVN() start");
+		
+		//根据svn仓库名查询svn仓库id
+		String svnRepoIdStr = svnRepoDao.querySvnRepoIdBySvnRepoName(svnRepo.getSvnRepoName());
+		long svnRepoId = 0;
+		if("".equals(svnRepoIdStr) || svnRepoIdStr == null) {
+			logger.error("svn_repo数据表中不存在svn仓库名为'" + svnRepo.getSvnRepoName() + "'的记录");
+			throw new Exception("svn_repo数据表中不存在svn仓库名为'" + svnRepo.getSvnRepoName() + "'的记录");
+		} else {
+			svnRepoId = Long.parseLong(svnRepoIdStr);		
+		}
+
+		//根据SVN库id查询SVN用户信息
+		//项目的用户
+		List<SvnUser> usrList = svnUserDao.getListBySvnRepoId(svnRepoId);
+		
+		// 项目的权限
+		Map<String, List<SvnUserAuthzInfo>> svnAuthMap = this.getSvnUserAuthzInfos(svnRepo.getSvnRepoName());
+
+		this.exportSvnConf(svnRepo);
+		this.exportPasswdSVN(svnRepo, usrList);
+		try {
+			this.exportAuthz(svnRepo, svnAuthMap);
+		} catch (Exception e) {
+			throw new Exception(e.getMessage());
+		}
+
+		logger.info("SvnServiceImpl.exportSVN() end");
+	}
+
+	/**
+	 * 获取有相同svn root的项目的权限列表
+	 * 
+	 * @param rootPath
+	 *            svn root
+	 * @return 有相同svn root的项目的权限列表
+	 */
+	@Override
+	public Map<String, List<SvnUserAuthzInfo>> getSvnAuthsByRootPath(String rootPath) {
+		logger.info("SvnServiceImpl.getSvnAuthsByRootPath() start");
+		
+		// <svn_path,List<SvnUserAuthzInfo>>
+		Map<String, List<SvnUserAuthzInfo>> results = new LinkedHashMap<String, List<SvnUserAuthzInfo>>();
+		
+		List<SvnUserAuthzInfo> svnUserAuthzInfoList = this.svnUserRightDao.getListByRootPath(rootPath);
+		
+		// 格式化返回数据
+		for (SvnUserAuthzInfo svnUserAuthzInfo : svnUserAuthzInfoList) {
+			List<SvnUserAuthzInfo> authList = results.get(svnUserAuthzInfo.getSvnPath());
+			if (authList == null) {
+				authList = new ArrayList<SvnUserAuthzInfo>();
+				results.put(svnUserAuthzInfo.getSvnPath(), authList);
+			}
+			authList.add(svnUserAuthzInfo);
+
+		}
+		logger.info("SvnServiceImpl.getSvnAuthsByRootPath() end");
+		return results;
+	}
+
+	/**
+	 * 获取项目的权限列表
+	 * 
+	 * @param svnRepoName
+	 *            项目
+	 * @return 项目的权限列表
+	 * @throws Exception 
+	 */
+	@Override
+	public Map<String, List<SvnUserAuthzInfo>> getSvnUserAuthzInfos(String svnRepoName) throws Exception {
+		logger.info("SvnServiceImpl.getSvnUserAuthzInfos() start");
+		
+		// <svn_path,List<SvnUserAuthzInfo>>
+		Map<String, List<SvnUserAuthzInfo>> results = new LinkedHashMap<String, List<SvnUserAuthzInfo>>();
+		
+		//根据svn仓库名查询svn仓库id
+		String svnRepoIdStr = svnRepoDao.querySvnRepoIdBySvnRepoName(svnRepoName);
+		long svnRepoId = 0;
+		if("".equals(svnRepoIdStr) || svnRepoIdStr == null) {
+			logger.error("svn_repo数据表中不存在svn仓库名为'" + svnRepoName + "'的记录");
+			throw new Exception("svn_repo数据表中不存在svn仓库名为'" + svnRepoName + "'的记录");
+		} else {
+			svnRepoId = Long.parseLong(svnRepoIdStr);		
+		}
+		
+		List<SvnUserAuthzInfo> svnUserAuthzInfoList = svnUserRightDao.getSvnUserRightList(svnRepoId);
+		
+		// 格式化返回数据
+		for (SvnUserAuthzInfo svnUserAuthzInfo : svnUserAuthzInfoList) {
+			List<SvnUserAuthzInfo> authList = results.get(svnUserAuthzInfo.getSvnPath());
+			if (authList == null) {
+				authList = new ArrayList<SvnUserAuthzInfo>();
+				results.put(svnUserAuthzInfo.getSvnPath(), authList);
+			}
+			authList.add(svnUserAuthzInfo);
+
+		}
+		
+		logger.info("SvnServiceImpl.getSvnUserAuthzInfos() end");
+		return results;
+	}
+
+	/**
+	 * 输出svn方式的密码文件
+	 * 
+	 * @param svnRepo
+	 *            项目
+	 * @param usrList
+	 *            项目用户列表
+	 */
+	@Override
+	public void exportPasswdSVN(SvnRepo svnRepo, List<SvnUser> usrList) {
+		
+		logger.info("SvnServiceImpl.exportPasswdSVN() start");
+		
+		//备份passwd文件
+		//passwd文件路径
+		String prePasswdPath = svnRepo.getSvnRepoPath() + "/conf/passwd";
+		//读取passwd文件的内容到prePasswdcontents
+		StringBuffer prePasswdcontents = ReadFileToString.getStrBuf(prePasswdPath);
+		
+		//备份passwd文件到svnRepo.getSvnRepoPath()/confBackup/目录下。
+		String passwdPath = svnRepo.getSvnRepoPath() + "/confBackup/" + svnRepo.getSvnRepoName() 
+				+ "-passwd-" + TimeUtils.getNowTime();
+		//需要备份passwd到文件
+		File prePasswd = new File(passwdPath);
+		//将passwd文件内容写入prePasswd中
+		this.write(prePasswd, prePasswdcontents.toString());
+		
+		
+		//刷新passwd的内容
+		File outFile = new File(svnRepo.getSvnRepoPath(), "/conf/passwd");
+		StringBuffer contents = new StringBuffer();
+		contents.append("[users]").append(SEP);
+
+		for (SvnUser usr : usrList) {
+			contents.append(usr.getSvnUserName()).append(" = ")
+					.append(EncryptUtil.decrypt(usr.getSvnPassword())).append(SEP);// 解密
+		}
+		
+/*		for (SvnUser usr : usrList) {
+			contents.append(usr.getSvnUserName()).append(" = ")
+					.append(usr.getSvnPassword()).append(SEP);
+		}*/
+		
+		this.write(outFile, contents.toString());
+		logger.info("SvnServiceImpl.exportPasswdSVN() end");
+	}
+
+	/**
+	 * 输出权限配置文件
+	 * 
+	 * @param svnRepo
+	 *            项目
+	 * @param resMap
+	 *            项目的权限列表
+	 * @throws Exception 
+	 */
+	@Override
+	public void exportAuthz(SvnRepo svnRepo, Map<String, List<SvnUserAuthzInfo>> resMap) throws Exception {
+		
+		logger.info("SvnServiceImpl.exportAuthz() start");
+		
+		if (svnRepo == null || StringUtils.isBlank(svnRepo.getSvnRepoName())) {
+			logger.error("svnRepo为空或者不存在svn仓库名为'" + svnRepo.getSvnRepoName() + "'的记录");
+			throw new Exception("svnRepo为空或者不存在svn仓库名为'" + svnRepo.getSvnRepoName() + "'的记录");
+		}
+		
+		//备份authz文件
+		//authz文件路径
+		String preAuthzPath = svnRepo.getSvnRepoPath() + "/conf/authz";
+		//读取authz文件的内容到prePasswdcontents
+		StringBuffer preAuthzContents = ReadFileToString.getStrBuf(preAuthzPath);
+		
+		//备份authz文件到svnRepo.getSvnRepoPath()/confBackup/目录下。
+		String authzPath = svnRepo.getSvnRepoPath() + "/confBackup/" + svnRepo.getSvnRepoName() 
+				+ "-authz-" + TimeUtils.getNowTime();
+		//需要备份authz文件 
+		File preAuthz = new File(authzPath);
+		//将authz文件内容写入preAuthz中
+		this.write(preAuthz, preAuthzContents.toString());
+		
+		//刷新authz内容
+		File outFile = new File(svnRepo.getSvnRepoPath(), "/conf/authz");
+		StringBuffer contents = new StringBuffer();
+		contents.append("[aliases]").append(SEP);
+		contents.append("[groups]").append(SEP);
+
+		contents.append(SEP);
+
+		for (Iterator<String> resIterator = resMap.keySet().iterator(); resIterator
+				.hasNext();) {
+			String res = resIterator.next();
+			contents.append(res).append(SEP);
+			for (SvnUserAuthzInfo svnUserAuthzInfo : resMap.get(res)) {
+				if (StringUtils.isNotBlank(svnUserAuthzInfo.getSvnUserName())) {
+					contents.append(svnUserAuthzInfo.getSvnUserName()).append(" = ")
+							.append(svnUserAuthzInfo.getSvnUserAuthz()).append(SEP);
+				}
+			}
+			contents.append(SEP);
+		}
+
+		this.write(outFile, contents.toString());
+		logger.info("SvnServiceImpl.exportAuthz() end");
+	}
+
+	
+	@Override
+	public void exportSvnConf(SvnRepo svnRepo) {
+		if (svnRepo == null || StringUtils.isBlank(svnRepo.getSvnRepoName())) {
+			return;
+		}
+		File outFile = new File(svnRepo.getSvnRepoPath(), "/conf/svnserve.conf");
+
+		StringBuffer contents = new StringBuffer();
+		contents.append("[general]").append(SEP);
+		contents.append("anon-access = none").append(SEP);
+		contents.append("auth-access = write").append(SEP);
+		contents.append("password-db = passwd").append(SEP);
+		contents.append("authz-db = authz").append(SEP);
+		contents.append("[sasl]").append(SEP);
+		this.write(outFile, contents.toString());
+		
+	}
+
+	/**
+	 * 写文件流
+	 * 
+	 * @param outFile
+	 *            输出文件
+	 * @param contents
+	 *            内容
+	 */
+	@Override
+	public void write(File outFile, String contents) {
+		
+		BufferedWriter writer = null;
+		try {
+			if (contents == null) {
+				contents = "";
+			}
+			if (!outFile.getParentFile().exists()) {
+				outFile.getParentFile().mkdirs();
+			}
+			writer = new BufferedWriter(new OutputStreamWriter(
+					new FileOutputStream(outFile), "UTF-8"));// UTF-8 without
+																// BOM
+			writer.write(contents);
+			logger.debug(outFile);
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new RuntimeException(e.getMessage());
+		} finally {
+			if (writer != null) {
+				try {
+					writer.flush();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+				try {
+					writer.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+
+}

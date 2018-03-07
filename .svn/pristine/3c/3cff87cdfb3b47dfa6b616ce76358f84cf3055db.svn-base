@@ -1,0 +1,99 @@
+package com.bmtc.svn.controller;
+
+
+import java.util.Collection;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Logger;
+import org.apache.shiro.authz.annotation.RequiresPermissions;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.tmatesoft.svn.core.SVNAuthenticationException;
+import org.tmatesoft.svn.core.SVNException;
+import org.tmatesoft.svn.core.SVNProperties;
+import org.tmatesoft.svn.core.io.SVNRepository;
+import org.tmatesoft.svn.core.wc.SVNClientManager;
+import org.tmatesoft.svn.core.wc.SVNRevision;
+
+import com.bmtc.common.annotation.Log;
+import com.bmtc.common.utils.R;
+import com.bmtc.svn.common.utils.EncryptUtil;
+import com.bmtc.svn.common.utils.SVNUtil;
+import com.bmtc.svn.common.web.BaseController;
+import com.bmtc.svn.domain.SvnInfo;
+import com.bmtc.svn.domain.SvnUserRepoInfo;
+import com.bmtc.svn.service.SvnUserService;
+import com.bmtc.svn.service.UpdateLocalCodeBySvnRepoService;
+
+/**
+ * svn管理前端接口处理
+ * @author lpf7161
+ *
+ */
+@RequestMapping("/svn/admin")
+@Controller
+public class SvnAdminController extends BaseController {
+	private static Logger logger = Logger.getLogger(SvnAdminController.class);
+	
+	@Autowired
+	private UpdateLocalCodeBySvnRepoService updateLocalCodeBySvnRepoService;
+	
+	@Autowired 
+	private SvnUserService svnUserService;
+	
+	/**
+	 * @param 
+	 * @return List<SvnRepo>
+	 * @throws Exception
+	 */
+	@RequiresPermissions("svn:svnUserRight:passTest")
+	@PostMapping("/svnRightPassTest")
+	@Log("测试svn联通性")
+	@ResponseBody
+	public R svnRightPassTest(SvnInfo svnInfo) {
+		logger.info("SvnAdminController.svnRightPassTest() start");
+		String svnUrl = svnInfo.getSvnRepoUrl();
+		String svnPath = svnInfo.getSvnPath();
+		String svnUserName = svnInfo.getSvnUserName();
+		String svnRepoName = svnInfo.getSvnRepoName();
+		SvnUserRepoInfo svnUserRepoInfo = svnUserService.querySvnUser(svnUserName, svnRepoName);
+		String svnPassword = svnUserRepoInfo.getSvnPassword();
+		//对SVN用户密码进行解密
+		svnPassword = EncryptUtil.decrypt(svnPassword);
+		svnPath = svnPath.split(":")[1].substring(0, svnPath.split(":")[1].length() - 1);
+		if(StringUtils.isBlank(svnPath)){
+			svnPath = "/";//root
+		}
+		if(!svnPath.startsWith("/")){
+			svnPath = "/" + svnPath;
+		}
+		svnUrl = svnUrl + svnPath;
+		SVNRepository repository = null;
+		try {
+			//SVNClientManager clientManager = SVNUtil.authSvn(svnUrl, svnUserName, svnPassword);
+			repository = SVNUtil.getRepository(svnUrl, svnUserName, svnPassword);
+			SVNProperties properties = new SVNProperties();
+	    	repository.getDir(svnPath, SVNRevision.HEAD.getNumber(), properties, (Collection) null);
+		} catch(SVNAuthenticationException e) {
+			e.printStackTrace();
+			logger.error(e.getMessage());
+			logger.info("SvnAdminController.svnRightPassTest() end");
+			return R.error(-1, "svn.auth.error:认证失败(" + e.getMessage() + ")");
+    	} catch (SVNException e) {
+    		e.printStackTrace();
+    		logger.error(e.getMessage());
+    		logger.info("SvnAdminController.svnRightPassTest() end");		
+			return R.error(-1, e.getMessage());
+		} finally {
+			if(repository != null) {
+				repository.closeSession();
+			}
+		}
+		
+		logger.info("SvnAdminController.svnRightPassTest() end");
+		return R.ok("SVN认证成功");
+	}
+}

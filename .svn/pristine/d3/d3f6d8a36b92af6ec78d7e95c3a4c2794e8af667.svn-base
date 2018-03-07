@@ -1,0 +1,341 @@
+package com.bmtc.task.service.impl;
+
+import java.sql.Date;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.bmtc.common.domain.Tree;
+import com.bmtc.common.utils.BuildTree;
+import com.bmtc.common.utils.Query;
+import com.bmtc.common.utils.ShiroUtils;
+import com.bmtc.device.domain.TestCase;
+import com.bmtc.device.service.TestCaseService;
+import com.bmtc.script.dao.ScriptDao;
+import com.bmtc.script.domain.Script;
+import com.bmtc.task.dao.BMTCTaskDao;
+import com.bmtc.task.dao.TaskScriptDao;
+import com.bmtc.task.domain.BMTCTask;
+import com.bmtc.task.domain.TaskScriptDO;
+import com.bmtc.task.service.BMTCTaskService;
+
+/**
+ * 测试任务service实现类
+ * @author Administrator
+ *
+ */
+@Service
+@Transactional
+public class BMTCTaskServiceImpl implements BMTCTaskService {
+
+	private static Logger logger = Logger.getLogger(BMTCTaskServiceImpl.class);
+	@Autowired
+	BMTCTaskDao bMTCTaskMapper;
+	@Autowired
+	TaskScriptDao taskScriptMapper;
+	@Autowired
+	ScriptDao scriptMapper;
+	@Autowired
+	TestCaseService testCaseService;
+	/**
+	 * 查询测试任务数据
+	 * @param params
+	 * @return
+	 */
+	@Override
+	public List<BMTCTask> list(Map<String, Object> params) {
+		logger.info("BMTCTaskServiceImpl.list() start");
+		params.put("deptId", ShiroUtils.getUser().getDeptId());
+		List<BMTCTask> tasks = bMTCTaskMapper.list(params);
+		logger.info("BMTCTaskServiceImpl.list() end");
+		return tasks;
+	}
+	/**
+	 * 查询总记录数
+	 * @param query
+	 * @return int
+	 */
+	@Override
+	public int count(Query query) {
+		logger.info("BMTCTaskServiceImpl.count() start");
+		logger.info("BMTCTaskServiceImpl.count() end");
+		return bMTCTaskMapper.count(query);
+	}
+	/**
+	 * 测试任务批量删除
+	 * @param taskIds
+	 * @return int
+	 */
+	@Override
+	public int batchremove(Long[] taskIds) {
+		logger.info("BMTCTaskServiceImpl.batchremove() start");
+		// 删除测试任务与脚本的关联关系
+		for (Long taskId : taskIds) {
+			taskScriptMapper.remove(taskId);
+		}
+		int status = bMTCTaskMapper.batchRemove(taskIds);
+		logger.info("BMTCTaskServiceImpl.batchremove() end");
+		return status;
+	}
+	/**
+	 * 通过ID查询测试任务信息
+	 * @param taskId
+	 * @return BMTCTask
+	 */
+	@Override
+	public BMTCTask get(Long taskId) {
+		logger.info("BMTCTaskServiceImpl.get() start");
+		BMTCTask bmtcTask = bMTCTaskMapper.get(taskId);
+		logger.info("BMTCTaskServiceImpl.get() end");
+		return bmtcTask;
+	}
+	/**
+	 * 查询测试任务名称是否存在
+	 * @param params
+	 * @return boolean
+	 */
+	@Override
+	public boolean exist(Map<String, Object> params) {
+		logger.info("BMTCTaskServiceImpl.exist() start");
+		List<BMTCTask> list = bMTCTaskMapper.list(params);
+		if(list.size() == 0){
+			// 不存在
+			logger.info("BMTCTaskServiceImpl.exist() end");
+			return false;
+		} else {
+			// 存在
+			logger.info("BMTCTaskServiceImpl.exist() end");
+			return true;
+		}
+	}
+	/**
+	 * 保存测试任务
+	 * @param bmtcTask
+	 * @return int
+	 */
+	@Override
+	public int save(BMTCTask bmtcTask) {
+		logger.info("BMTCTaskServiceImpl.save() start");
+		// 创建人
+		if(bmtcTask.getCreatedId() == null){
+			bmtcTask.setCreatedId(ShiroUtils.getUser().getUserId());
+		}
+		// 获取现在时间,使用基类获取
+		Date date = new Date(System.currentTimeMillis());
+		// 创建时间
+		if(bmtcTask.getGmtCreate() == null){
+			bmtcTask.setGmtCreate(date);
+		}
+		// 修改时间
+		bmtcTask.setGmtModified(date);
+		// 保存测试任务
+		int count = bMTCTaskMapper.save(bmtcTask);
+		// 如果未关联脚本，直接返回
+		if (bmtcTask.getTestSuiteCaseNames() == null) {
+			logger.info("BMTCTaskServiceImpl.save() start");
+			return count;
+		}
+		/**
+		 * 维护测试任务与脚本的关联关系
+		 */
+		List<TestCase> testCases = getTestCases(bmtcTask);
+		// 如果关联的均为无效测试套，直接返回
+		if(testCases == null){
+			logger.info("BMTCTaskServiceImpl.save() end");
+			return count;
+		}
+		// 遍历testCases,维护测试任务和脚本的关联关系
+		for (TestCase testCase : testCases) {
+			// 获取每个测试套的id
+			Script script = scriptMapper.getScriptByTestSuitPath(testCase.getTestSuite());
+			TaskScriptDO taskScriptDO = new TaskScriptDO(bmtcTask.getTaskId(), script.getScriptId(), testCase.getCaseName().toString());
+			// 保存信息到中间表
+			taskScriptMapper.save(taskScriptDO);
+		}
+		logger.info("BMTCTaskServiceImpl.save() start");
+		return count;
+	}
+	/**
+	 * 修改测试任务
+	 * @param bMTCTask
+	 * @return int
+	 */
+	@Override
+	public int update(BMTCTask bMTCTask) {
+		logger.info("BMTCTaskServiceImpl.update() start");
+		// 获取现在时间
+		Date date = new Date(System.currentTimeMillis());
+		// 设置修改时间
+		bMTCTask.setGmtModified(date);
+		// 修改测试任务
+		int count = bMTCTaskMapper.update(bMTCTask);
+		/**
+		 * 维护测试任务与脚本的关联关系
+		 */
+		// 先删除该测试任务关联的脚本再重新添加
+		taskScriptMapper.remove(bMTCTask.getTaskId());
+		// 如果未关联脚本，直接返回
+		if (bMTCTask.getTestSuiteCaseNames() == null) {
+			logger.info("BMTCTaskServiceImpl.save() end");
+			return count;
+		}
+		
+		List<TestCase> testCases = getTestCases(bMTCTask);
+		// 如果关联的均为无效测试套，直接返回
+		if(testCases == null){
+			logger.info("BMTCTaskServiceImpl.save() end");
+			return count;
+		}
+		// 遍历testCases,维护测试任务和脚本的关联关系
+		for (TestCase testCase : testCases) {
+			// 获取每个测试套的id
+			Script script = scriptMapper.getScriptByTestSuitPath(testCase.getTestSuite());
+			TaskScriptDO taskScriptDO = new TaskScriptDO(bMTCTask.getTaskId(), script.getScriptId(), testCase.getCaseName().toString());
+			// 保存信息到中间表
+			taskScriptMapper.save(taskScriptDO);
+		}
+		logger.info("BMTCTaskServiceImpl.update() end");
+		return count;
+	}
+	/**
+	 * 通过前段参数BMTCTask bMTCTask获得List<TestCase>的方法
+	 * @param BMTCTask bMTCTask
+	 * @return List<TestCase>
+	 */
+	private List<TestCase> getTestCases(BMTCTask bMTCTask) {
+		String testSuiteCaseNames = bMTCTask.getTestSuiteCaseNames();
+		// 获得测试任务关联的脚本ID
+		String[] testSuitePaths = testSuiteCaseNames.split(",");
+		// 创建集合存储TestCase
+		List<TestCase> testCases = new ArrayList<TestCase>();
+		// 遍历获得关联的脚本信息
+		for (String testSuitePath : testSuitePaths) {
+			// 判断路径是否以“.txt”结尾
+			if(testSuitePath.endsWith(".txt")){// 测试套
+				boolean flag = false;
+				for (TestCase testCase : testCases) {
+					if(testCase.getTestSuite().equals(testSuitePath)){
+						flag = true;
+					}
+				}
+				if(!flag){
+					// 创建TestCase对象
+					TestCase testCase = new TestCase();
+					// 存储测试套
+					testCase.setTestSuite(testSuitePath);
+					// 创建List<String>集合存储该测试套下的caseName
+					List<String> caseNames = new ArrayList<String>();
+					// 再次遍历
+					for (String t : testSuitePaths) {
+						// 判断该路径是否为该测试套下的caseName(不是以".txt"结尾，并且包含测试套路径)
+						if(!t.endsWith(".txt") && t.contains(testSuitePath)){
+							String string = t.substring((t.indexOf(".txt")+5));
+							// 获取该路径的最后一级名称，添加到存储此测试套的caseNames的集合中
+							caseNames.add(string);
+						}
+					}
+					// 如果测试套中无caseName，不添加关联关系
+					if(caseNames.size() == 0){
+						continue;
+					}
+					// 加此测试套对应的caseNames存储到testCase中
+					testCase.setCaseName(caseNames);
+					testCases.add(testCase);
+				}
+			}
+			// 判断路径是否包含“.txt”
+			if(!testSuitePath.endsWith(".txt") && testSuitePath.contains(".txt")){
+				String tp = testSuitePath.substring(0, testSuitePath.lastIndexOf("\\"));
+				boolean flag = false;
+				for (TestCase testCase : testCases) {
+					if(testCase.getTestSuite().equals(tp)){
+						flag = true;
+					}
+				}
+				if(!flag){
+					// 创建TestCase对象
+					TestCase testCase = new TestCase();
+					// 获取测试套路径
+					testCase.setTestSuite(tp);
+					// 创建List<String>集合存储该测试套下的caseName
+					List<String> caseNames = new ArrayList<String>();
+					for (String testPath : testSuitePaths) {
+						// 判断该路径是否为该测试套下的caseName(不是以".txt"结尾，并且包含测试套路径)
+						if(!testPath.endsWith(".txt") && testPath.contains(tp)){
+							String caseName = testPath.substring((testPath.indexOf(".txt") + 5));
+							if(!caseNames.contains(caseName)){
+								// 获取该路径的最后一级名称，添加到存储此测试套的caseNames的集合中
+								caseNames.add(caseName);
+							}
+						}
+					}
+					// 如果测试套中无caseName，不添加关联关系
+					if(caseNames.size() == 0){
+						continue;
+					}
+					// 加此测试套对应的caseNames存储到testCase中
+					testCase.setCaseName(caseNames);
+					testCases.add(testCase);
+				}
+			}
+		}
+		return testCases;
+	}
+	/**
+	 * 测试任务删除
+	 * @param taskId
+	 * @return int
+	 */
+	@Override
+	public int remove(Long taskId) {
+		logger.info("BMTCTaskServiceImpl.remove() start");
+		// 删除测试任务与脚本的关联关系
+		taskScriptMapper.remove(taskId);
+		// 删除测试任务
+		int count = bMTCTaskMapper.remove(taskId);
+		logger.info("BMTCTaskServiceImpl.remove() end");
+		return count;
+	}
+	/**
+	 * 查询用户所属产品下的任务列表
+	 * @param Integer deptId
+	 * @return List<BMTCTask>
+	 */
+	@Override
+	public Tree<BMTCTask> getTaskList(Integer deptId) {
+		logger.info("BMTCTaskServiceImpl.getTaskList() start");
+		Map<String,Object> map = new HashMap<String,Object>();
+		map.put("deptId", deptId);
+		// 创建一个list集合，存储节点数据
+		List<Tree<BMTCTask>> trees = new ArrayList<Tree<BMTCTask>>();
+		// 获取测试任务数据
+		List<BMTCTask> taskList = bMTCTaskMapper.list(map);
+		// 遍历测试任务
+		for (BMTCTask bmtcTask : taskList) {
+			// 创建一个节点对象
+			Tree<BMTCTask> tree = new Tree<BMTCTask>();
+			// 将测试任务的ID作为节点ID
+			tree.setId(bmtcTask.getTaskId().toString());
+			// 只显示测试任务列表，所以，所有parentId均为0
+			tree.setParentId("0");
+			// 将测试任务的名称作为节点名称
+			tree.setText(bmtcTask.getTaskName());
+			// 创建Map存储节点状态：(opened/closed)
+			Map<String, Object> state = new HashMap<>(16);
+			state.put("opend", true);
+			tree.setState(state);
+			// 将这个节点对象存储到trees集合中
+			trees.add(tree);
+		}
+		// 默认顶级菜单为０，根据数据库实际情况调整
+		Tree<BMTCTask> t = BuildTree.build(trees);
+		logger.info("BMTCTaskServiceImpl.getTaskList() start");
+		return t;
+	}
+}

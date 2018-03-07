@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+<head th:include="include :: header"></head>
+<body class="gray-bg">
+	<div class="wrapper wrapper-content animated fadeInRight">
+		<div class="row">
+			<div class="col-sm-12">
+				<div class="ibox float-e-margins">
+					<div class="ibox-content">
+						<input type="hidden" id="taskId" name="taskId" th:value="${taskId}"/>
+						<!-- 测试任务相关脚本树形结构展示的div -->
+						<div class="form-group">
+							<div class="col-sm-8">
+								<div id="scriptTree">
+								</div>
+								
+							</div>
+						</div>
+						
+					</div>
+				</div>
+			</div>
+		</div>
+	<div th:include="include::footer"></div>
+</body>
+<script type="text/javascript">
+	$(document).ready(function() {
+		var taskId = $("#taskId").val();
+		getTreeData(taskId);
+	});
+	function getTreeData(taskId) {
+		$.ajax({
+			type : "GET",
+			url : "/script/getTaskScriptTreeData/" + taskId,
+			success : function(tree) {
+				loadTree(tree);
+			}
+		});
+	}
+	function loadTree(tree) {
+		if(tree == null){
+			layer.msg("该测试任务尚未关联脚本！");
+		} else {
+			$('#scriptTree').jstree({
+				'core' : {
+					'data' : tree
+				},
+			});
+			$('#scriptTree').jstree().open_all();
+		}
+	}
+</script>
+</html>

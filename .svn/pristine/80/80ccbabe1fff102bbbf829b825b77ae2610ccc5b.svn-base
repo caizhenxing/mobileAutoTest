@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+<head th:include="include :: header"></head>
+<body class="gray-bg">
+	<div class="wrapper wrapper-content ">
+		<div class="row">
+			<div class="col-sm-12">
+				<form id="searchBatch">
+					<input type="search" id="batchName" class="bmtcBatchSearch-control"
+							   placeholder="批次名称"/>
+					<button type="submit" class="btn btn-success">搜索</button>
+				</form>
+				<div class="ibox-content">
+					<div class="col-sm-8 col-sm-offset-5" id="showLoading"></div>
+					<div id="jsTree"></div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div th:include="include :: footer"></div>
+	<script type="text/javascript">
+		$(document).ready(function() {
+			getTreeData();
+		});
+		function getTreeData() {
+			$.ajax({
+				type : "POST",
+				url : "/sys/batch/getBatchTree",
+				beforeSend : beforeSend, //用于在向服务器发送请求之前执行显示进度条
+				async : true, //异步
+				success : function(tree) {
+					loadTree(tree);
+				},
+				complete : complete
+			});
+		}
+		
+		function beforeSend(XMLHttpRequest) {
+			// 显示进度条
+			$("#showLoading").append("<div><img src='/img/loading-bar.gif' /><div>");
+		}
+		
+		function complete(XMLHttpRequest, textStatus) {
+			// 隐藏进度条
+			$("#showLoading").remove();
+		}
+		
+		function loadTree(tree) {
+			$('#jsTree').jstree({
+				'core' : {
+					'data' : tree
+				},
+				"plugins" : [ "search" ]
+			});
+			$("#searchBatch").submit(function (e) {
+				e.preventDefault();
+				$("#jsTree").jstree(true).search($("#batchName").val());
+			});
+			$('#jsTree').jstree().open_all();	
+		}
+		
+		$('#jsTree').on("changed.jstree", function(e, data) {
+			if(data.node.id!=-1){
+				parent.loadBatch(data.node.id,data.node.text);
+				var index = parent.layer.getFrameIndex(window.name); // 获取窗口索引
+				parent.layer.close(index);
+			}
+		});
+	</script>
+</body>
+</html>

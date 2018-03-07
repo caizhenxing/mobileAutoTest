@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+<head th:include="include :: header"></head>
+<body class="gray-bg">
+	<div class="wrapper wrapper-content ">
+		<div class="row">
+			<div class="col-sm-12">
+				<div class="ibox float-e-margins">
+					<div class="ibox-content">
+						<form class="form-horizontal m-t" id="signupForm">
+							<!-- 所属产品机构 -->
+							<div class="form-group">
+								<label class="col-sm-3 control-label">所属产品机构：</label>
+								<div class="col-sm-8">
+									<input id="deptId" name="deptId" class="hidden"
+										th:value="${deptId}"> <input id="deptName"
+										name="deptName" class="form-control" type="text" style="cursor: pointer;"
+										readonly="readonly" onclick="openDept()" placeholder="所属产品机构">
+								</div>
+							</div>
+							<!-- 测试任务SVN库名 -->
+							<div class="form-group">
+								<label class="col-sm-3 control-label">产品机构SVN库路径：</label>
+								<div class="col-sm-8">
+									<input id="svnPath" name="svnPath" class="form-control"
+										type="text" placeholder="eg:svn://22.11.31.36/automation_test/branches">
+								</div>
+							</div>
+							<!-- 提交按钮 -->
+							<div class="form-group">
+								<div class="col-sm-8 col-sm-offset-3">
+									<button type="submit" class="btn btn-primary" 
+										style="margin-left: 60px">提交</button>
+								</div>
+							</div>
+						</form>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div th:include="include::footer"></div>
+	<script type="text/javascript" src="/js/appjs/script/updatePage.js">
+		
+	</script>
+</body>
+</html>

@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bmtc.svn.dao.SvnUserRightDao">
+	<resultMap id="SvnUserResultMap" type="com.bmtc.svn.domain.SvnUser" >
+		<id column="svn_user_id" property="id" />
+		<result column="svn_user_name" property="svnUserName" />
+		<result column="svn_password" property="svnPassword" />
+		<result column="svn_repo_id" property="svnRepoId" />
+		<result column="user_status" property="status" />
+		<result column="svn_user_create_date" property="svnUserCreateDate" />
+		<result column="svn_user_modify_date" property="svnUserModifyDate" />
+	</resultMap>
+	
+	<resultMap id="SvnUserAuthzResultMap" type="com.bmtc.svn.domain.SvnUserAuthz" >
+		<id column="svn_user_authz_id" property="id" />
+		<result column="svn_user_authz" property="svnUserAuthz" />
+		<result column="svn_path" property="svnPath" />
+		<result column="svn_user_id" property="svnUserId" />
+		<result column="svn_repo_id" property="svnRepoId" />
+		<result column="authz_status" property="status" />
+		<result column="svn_user_authz_create_date" property="svnUserAuthzCreateDate" />
+		<result column="svn_user_authz_modify_date" property="svnUserAuthzModifyDate" />
+	</resultMap>
+
+	<resultMap id="SvnRepoResultMap" type="com.bmtc.svn.domain.SvnRepo" >
+		<id column="svn_repo_id" property="id" />
+		<result column="svn_repo_name" property="svnRepoName" />
+		<result column="svn_repo_path" property="svnRepoPath" />
+		<result column="svn_repo_url" property="svnRepoUrl" />
+		<result column="svn_repo_des" property="svnRepoDes" />
+	</resultMap>
+	
+	<resultMap id="SvnUserAuthzInfoResultMap" type="com.bmtc.svn.domain.SvnUserAuthzInfo" >
+		<id column="svn_repo_id" property="svnRepoId" />
+		<id column="svn_user_id" property="svnUserId" />
+		<id column="svn_user_authz_id" property="svnUserAuthzId" />
+		<result column="svn_repo_name" property="svnRepoName" />
+		<result column="svn_repo_path" property="svnRepoPath" />
+		<result column="svn_repo_url" property="svnRepoUrl" />
+		<result column="svn_repo_des" property="svnRepoDes" />
+		<result column="name" property="name" />
+		<result column="svn_user_name" property="svnUserName" />
+		<result column="svn_password" property="svnPassword" />
+		<result column="user_status" property="userStatus" />
+		<result column="svn_user_create_date" property="svnUserCreateDate" />
+		<result column="svn_user_modify_date" property="svnUserModifyDate" />
+		<result column="svn_user_authz" property="svnUserAuthz" />
+		<result column="svn_path" property="svnPath" />
+		<result column="authz_status" property="authzStatus" />
+		<result column="svn_user_authz_create_date" property="svnUserAuthzCreateDate" />
+		<result column="svn_user_authz_modify_date" property="svnUserAuthzModifyDate" />
+	</resultMap>
+
+	<sql id="SvnRepo_Column_List" >
+    	svn_repo_id, svn_repo_name, svn_repo_path, svn_repo_url, svn_repo_des
+    </sql>
+    
+	<sql id="SvnUser_Column_List" >
+    	svn_user_id, svn_user_name, svn_repo_id, user_status, svn_user_create_date, svn_user_modify_date
+	 </sql>
+
+	<sql id="SvnUserAuthz_Column_List" >
+    	svn_user_authz_id, svn_user_authz, svn_path, svn_user_id, svn_repo_id, authz_status, svn_user_authz_create_date, svn_user_authz_modify_date
+    </sql>
+
+	<!-- 根据SVN用户名查询svn用户id -->
+	<select id="querySvnUserIdBySvnUserName" parameterType="java.lang.String" resultType="java.lang.String" >
+	    select svn_user_id
+	    from svn_user
+	    where svn_user_name = #{svnUserName}
+	</select>
+	
+	<!-- 根据SVN用户id查询svn_user_authz表中记录个数 -->
+	<select id="countBySvnUserId" resultType="java.lang.Integer" parameterType="java.lang.Long" >
+		select count(*) from svn_user_authz
+		where svn_user_id = #{svnUserId}
+	</select>
+
+	<!-- 根据SVN用户id和SVN路径查询svn_user_authz表中记录个数 -->
+	<select id="countBySvnUserIdAndSvnPath" resultType="java.lang.Integer" >
+		select count(*) from svn_user_authz
+		where svn_user_id = #{svnUserId} and svn_path = #{svnPath}
+	</select>
+	
+	<!-- 增加用户SVN权限 -->
+	<insert id="addSvnUserRight" parameterType="com.bmtc.svn.domain.SvnUserAuthz">
+		insert into svn_user_authz(
+		svn_user_authz,
+		svn_path,
+		svn_user_id,
+		svn_repo_id,
+		authz_status,
+		svn_user_authz_create_date,
+		svn_user_authz_modify_date)
+		values
+		(#{svnUserAuthz},
+		#{svnPath},
+		#{svnUserId},
+		#{svnRepoId},
+		#{status},
+		#{svnUserAuthzCreateDate},
+		#{svnUserAuthzModifyDate})
+	</insert>
+	
+	<!-- 根据svnUserId和svnPath删除用户SVN权限 -->
+	<delete id="deleteSvnUserRight" >
+	    delete from svn_user_authz
+	    where svn_user_id = #{svnUserId} and svn_path = #{svnPath}
+	</delete> 
+	
+	<!-- 根据svnUserId集删除用户SVN权限 -->
+	<delete id="deleteSvnUserRightBySvnUserId" >
+	    delete from svn_user_authz
+	    where svn_user_id = #{svnUserId}
+	</delete> 
+	
+	<!-- 根据SVN用户名、库名和SVN路径修改用户SVN权限 -->
+	<update id="updateSvnUserRight" parameterType="com.bmtc.svn.domain.SvnUserAuthz" >
+	    update svn_user_authz
+		<set>
+			<if test="svnUserAuthz != null and svnUserAuthz != ''">
+				svn_user_authz = #{svnUserAuthz},
+			</if>
+			<if test="svnPath != null and svnPath != ''">
+				svn_path = #{svnPath},
+			</if>
+			<if test="svnUserId != null">
+				svn_user_id = #{svnUserId},
+			</if>
+			<if test="svnRepoId != null">
+				svn_repo_id = #{svnRepoId},
+			</if>
+			<if test="status != null">
+				authz_status = #{status},
+			</if>
+			<if test="svnUserAuthzModifyDate != null">
+				svn_user_authz_modify_date = #{svnUserAuthzModifyDate}
+			</if>
+		</set>
+	    where svn_user_id = #{svnUserId} and svn_path = #{svnPath}
+	</update>
+	
+	<!-- 根据svnUserId查询用户的svn权限信息集 -->
+	<!-- <select id="querySvnUserRightBySvnUserId" resultMap="SvnUserAuthzResultMap" parameterType="java.lang.Long" >
+	    select 
+	    <include refid="SvnUserAuthz_Column_List" />
+	    from svn_user_authz
+	    where svn_user_id = #{svnUserId}
+	</select> -->
+	
+	<!-- 根据svnUserId和svnRepoId查询用户的svn权限信息集 -->
+	<select id="querySvnUserRight" resultMap="SvnUserAuthzInfoResultMap" >
+	    select
+	    a.svn_repo_id, a.svn_repo_name, a.svn_repo_path, a.svn_repo_url, a.svn_repo_des, 
+	    b.svn_user_id, b.svn_user_name, b.svn_password, b.user_status, 
+	    b.svn_user_create_date, b.svn_user_modify_date, c.svn_user_authz_id, c.svn_user_authz,
+	    c.svn_path, c.authz_status, c.svn_user_authz_create_date, c.svn_user_authz_modify_date
+	    from svn_repo a join svn_user b on 
+	    (a.svn_repo_id = b.svn_repo_id) join svn_user_authz c on (b.svn_user_id = c.svn_user_id 
+	    and b.svn_repo_id = c.svn_repo_id)
+	    where c.svn_user_id = #{svnUserId} and c.svn_repo_id = #{svnRepoId}
+	    <if test="offset != null and limit != null">
+			limit #{offset}, #{limit}
+		</if>
+	</select>
+	
+	<!-- 根据SVN用户名和仓库名查询用户SVN权限 -->
+	<select id="querySvnRight" resultMap="SvnUserAuthzInfoResultMap" >
+	    select
+	    a.svn_repo_id, a.svn_repo_name, a.svn_repo_path, a.svn_repo_url, a.svn_repo_des, 
+	    b.svn_user_id, b.svn_user_name, b.svn_password, b.user_status, 
+	    b.svn_user_create_date, b.svn_user_modify_date, 
+	    c.svn_user_authz_id, c.svn_user_authz,
+	    c.svn_path, c.authz_status, c.svn_user_authz_create_date, c.svn_user_authz_modify_date,
+	    f.name 
+	    from svn_repo a 
+	    join svn_user b on (a.svn_repo_id = b.svn_repo_id) 
+	    join svn_user_authz c on (b.svn_user_id = c.svn_user_id  and b.svn_repo_id = c.svn_repo_id) 
+	    join sys_user f on (b.svn_user_name = f.username)
+	    <where>
+		    <if test="svnUserName != null and svnUserName != ''">
+				and b.svn_user_name = #{svnUserName}
+			</if>
+			<if test="svnRepoName != null and svnRepoName != ''">
+				and a.svn_repo_name = #{svnRepoName}
+			</if>
+			<if test="svnPath != null and svnPath != ''">
+				and c.svn_path = #{svnPath}
+			</if>
+			<if test="svnUserAuthz != null and svnUserAuthz != ''">
+				and c.svn_user_authz = #{svnUserAuthz}
+			</if>
+		</where>
+		<choose>
+			<when test="sort != null and sort.trim() != ''">
+				order by ${sort} ${order}
+			</when>
+			<otherwise>
+				order by a.svn_repo_id
+			</otherwise>
+		</choose>
+	    <if test="offset != null and limit != null">
+			limit #{offset}, #{limit}
+		</if>
+	</select>
+	
+	<!-- 根据SVN用户名和仓库名查询用户SVN权限记录数-->
+	<select id="countSvnRight" resultType="java.lang.Integer" >
+		select count(*) from svn_repo a join svn_user b on (a.svn_repo_id = b.svn_repo_id) 
+	    join svn_user_authz c on (b.svn_user_id = c.svn_user_id and b.svn_repo_id = c.svn_repo_id) 
+	    join sys_user f on (b.svn_user_name = f.username)
+		<where>
+		    <if test="svnUserName != null and svnUserName != ''">
+				and b.svn_user_name = #{svnUserName}
+			</if>
+			<if test="svnRepoName != null and svnRepoName != ''">
+				and a.svn_repo_name = #{svnRepoName}
+			</if>
+			<if test="svnPath != null and svnPath != ''">
+				and c.svn_path = #{svnPath}
+			</if>
+			<if test="svnUserAuthz != null and svnUserAuthz != ''">
+				and c.svn_user_authz = #{svnUserAuthz}
+			</if>
+		</where>
+	</select>
+	
+	<!-- 根据svnRepoId查询用户的svn权限信息集 -->
+	<select id="getSvnUserRightList" resultMap="SvnUserAuthzInfoResultMap" >
+	    select 
+	    a.svn_repo_id, a.svn_repo_name, a.svn_repo_path, a.svn_repo_url, a.svn_repo_des, 
+	    b.svn_user_id, b.svn_user_name, b.svn_password, b.user_status, 
+	    b.svn_user_create_date, b.svn_user_modify_date, 
+	    c.svn_user_authz_id, c.svn_user_authz, c.svn_path, c.authz_status, 
+	    c.svn_user_authz_create_date, c.svn_user_authz_modify_date
+	    from svn_repo a join svn_user b on (a.svn_repo_id = b.svn_repo_id) 
+	    join svn_user_authz c on (b.svn_repo_id = c.svn_repo_id and b.svn_user_id = c.svn_user_id)
+	    where c.svn_repo_id = #{svnRepoId} order by c.svn_path,b.svn_user_name
+	</select>
+				
+	
+	<!-- 查询具有相同svn root的项目资源的权限列表 -->
+	<select id="getListByRootPath" resultMap="SvnUserAuthzInfoResultMap" >
+	    select 
+	    a.svn_repo_id, a.svn_repo_name, a.svn_repo_path, a.svn_repo_url, a.svn_repo_des, 
+	    b.svn_user_id, b.svn_user_name, b.svn_password, b.user_status, 
+	    b.svn_user_create_date, b.svn_user_modify_date, 
+	    c.svn_user_authz_id, c.svn_user_authz, c.svn_path, c.authz_status, 
+	    c.svn_user_authz_create_date, c.svn_user_authz_modify_date
+	    from svn_repo a join svn_user b on (a.svn_repo_id = b.svn_repo_id) 
+	    join svn_user_authz c on (b.svn_user_id = c.svn_user_id)
+	    where b.svn_repo_id in (select distinct svn_repo_id from svn_repo where svn_repo_path like #{rootPath}) 
+	    order by c.svn_path,b.svn_user_name
+	</select>
+	
+	
+	
+	<!-- 根据svnUserId查询用户的svn权限信息集 -->
+	<select id="querySvnUserRightBySvnUserId" resultMap="SvnUserAuthzInfoResultMap" >
+	    select 
+	    a.svn_repo_id, a.svn_repo_name, a.svn_repo_path, a.svn_repo_url, a.svn_repo_des, 
+	    b.svn_user_id, b.svn_user_name, b.svn_password, b.user_status, 
+	    b.svn_user_create_date, b.svn_user_modify_date, 
+	    c.svn_user_authz_id, c.svn_user_authz, c.svn_path, c.authz_status, 
+	    c.svn_user_authz_create_date, c.svn_user_authz_modify_date
+	    from svn_repo a join svn_user b on (a.svn_repo_id = b.svn_repo_id) 
+	    join svn_user_authz c on (b.svn_user_id = c.svn_user_id 
+	    and b.svn_repo_id = c.svn_repo_id)
+	    where c.svn_user_id = #{svnUserId}
+	    <if test="offset != null and limit != null">
+			limit #{offset}, #{limit}
+		</if>
+	</select>
+	
+</mapper>

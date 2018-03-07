@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh_CN" xmlns:th="http://www.thymeleaf.org"
+	xmlns:shiro="http://www.pollix.at/thymeleaf/shiro">
+<meta charset="utf-8">
+<head th:include="include :: header"></head>
+<body class="gray-bg">
+	<div class="wrapper wrapper-content ">
+		<div class="row">
+			<div class="col-sm-11">
+				<div class="ibox">
+					<div class="ibox-body">
+						<div class="fixed-table-toolbar">
+							<div class="columns pull-left">
+								<button shiro:hasPermission="svn:svnConfDiff:add" type="button"
+									class="btn  btn-primary" onclick="add()" id="submit">
+									<i class="fa fa-plus hidden" aria-hidden="true"></i>更新
+								</button>
+								<button shiro:hasPermission="svn:svnConfDiff:batchRemove" type="button" 
+									class="btn  btn-danger" onclick="batchRemove()">
+									<i class="fa fa-trash hidden" aria-hidden="true"></i>删除
+								</button>
+							</div>
+							<div class="columns pull-right">
+								<button class="btn btn-success" onclick="reLoad()">查询</button>
+							</div>
+							<div class="columns pull-right col-md-2 nopadding">
+								<input id="searchSvnRepoName" type="text" class="form-control"
+									placeholder="SVN仓库名称">
+							</div>
+							<div class="columns pull-left" id="showLoading"></div>			
+						</div>					
+						<table id="svnConfDiffTable" data-mobile-responsive="true">
+						</table>
+					</div>
+				</div>
+			</div>
+		</div>
+		<!--shiro控制bootstraptable行内按钮看见性 来自bootdo的创新方案 -->
+		<div>
+			<script type="text/javascript">
+				var s_remove_h = 'hidden';
+			</script>
+		</div>
+		<div shiro:hasPermission="svn:svnConfDiff:remove">
+			<script type="text/javascript">
+				s_remove_h = '';
+			</script>
+		</div>
+	</div>
+	<div th:include="include :: footer"></div>
+	<script type="text/javascript" src="/js/appjs/svn/svnConfDiff/svnConfDiff.js"></script>
+</body>
+</html>

@@ -1,0 +1,349 @@
+package com.bmtc.svn.service.impl;
+
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.bmtc.svn.dao.SvnRepoDao;
+import com.bmtc.svn.dao.SvnUserRightDao;
+import com.bmtc.svn.domain.SvnRepo;
+import com.bmtc.svn.domain.SvnUserAuthz;
+import com.bmtc.svn.domain.SvnUserAuthzInfo;
+import com.bmtc.svn.service.SvnRepoService;
+import com.bmtc.svn.service.SvnUserRightService;
+
+/**
+ * SVN用户权限管理业务逻辑实现
+ * @author lpf7161
+ *
+ */
+@Service("SvnUserRightService")
+public class SvnUserRightServiceImpl implements SvnUserRightService 
+{
+	private static Logger logger = Logger.getLogger(SvnUserRightServiceImpl.class);
+	
+	@Autowired
+	private SvnUserRightDao svnUserRightDao;
+	
+	@Autowired
+	private SvnRepoDao svnRepoDao;
+	
+	/**
+	 * SVN仓库服务层
+	 */
+	@Resource(name = "SvnRepoService")
+	private SvnRepoService svnRepoService;
+	
+	/**
+	 * 增加用户SVN权限，首先根据SVN库名执行querySvnRepoIdBySvnRepoName得到svnRepoId，
+	 * 然后根据SVN用户名和仓库名执行querySvnUser()得到svnUserId，
+	 * 接着根据svnUserId和svnPath查询记录个数，记录为0时将svnUserAuthz写入svn_user_authz表；
+	 * 记录非0时，说明表中已经有该用户在该SVN仓库下svnPath的权限，则不用插入记录
+	 * @param svnUserAuthz
+	 */
+	@Override
+	public int addSvnUserRight(SvnUserAuthz svnUserAuthz) {	
+		logger.info("SvnUserRightServiceImpl.addSvnUserRight() start");
+		
+		//如果资源没有[],自动加上
+		String svnPath = this.formatRes(svnUserAuthz.getSvnRepoId(), svnUserAuthz.getSvnPath());
+		svnUserAuthz.setSvnPath(svnPath);
+		
+		//将svn用户权限信息写入数据库
+		int res = 0;
+		//根据svnUserId和svnPath查询记录个数
+		int cnt = svnUserRightDao.countBySvnUserIdAndSvnPath(svnUserAuthz.getSvnUserId(),
+				svnUserAuthz.getSvnPath());
+		if(cnt != 0) {
+			logger.error("svn_user_authz表中已存在svnUserId=" + svnUserAuthz.getSvnUserId() + ", svnPath=" + svnUserAuthz.getSvnPath() + "的权限记录");
+		} else {
+			//cnt为0时将svnUserAuthz写入svn_user_authz表
+			res = svnUserRightDao.addSvnUserRight(svnUserAuthz);
+			logger.info("添加" + res + "条SVN用户权限完成");
+		}
+		logger.info("SvnUserRightServiceImpl.addSvnUserRight() end");
+		return res;
+	}
+
+	
+	/**
+	 * 根据SVN用户名、库名和SVN路径修改用户SVN权限，首先根据SVN库名执行querySvnRepoIdBySvnRepoName得到svnRepoId，
+	 * 然后根据SVN用户名和仓库名执行querySvnUser()得到svnUserId，
+	 * 然后根据svnUserId和svnPath查询记录个数，记录非0时修改svnUserAuthz信息.
+	 * @param svnUserAuthz
+	 */
+	@Override
+	public int updateSvnUserRight(SvnUserAuthz svnUserAuthz) {
+		logger.info("SvnUserRightServiceImpl.updateSvnUserRight() start");
+		
+		//如果资源没有[],自动加上
+		String svnPath = this.formatRes(svnUserAuthz.getSvnRepoId(), svnUserAuthz.getSvnPath());
+		svnUserAuthz.setSvnPath(svnPath);
+		
+		int res = 0;
+		//根据svnUserId和svnPath查询记录个数
+		int cnt = svnUserRightDao.countBySvnUserIdAndSvnPath(svnUserAuthz.getSvnUserId(),
+				svnUserAuthz.getSvnPath());
+		if(cnt == 0) {
+			logger.error("svn_user_authz表中不存在svnUserId=" + svnUserAuthz.getSvnUserId() + ", svnPath=" + svnUserAuthz.getSvnPath() + "的权限记录");
+		} else {
+			//cnt非0时将修改SVN用户权限信息写入数据库
+			res = svnUserRightDao.updateSvnUserRight(svnUserAuthz);
+			logger.info("修改SVN用户权限信息写入数据库成功");
+		}
+		logger.info("SvnUserRightServiceImpl.updateSvnUserRight() end");
+		return res;
+	}
+
+	/**
+	 * 保存SVN用户权限，首先根据SVN库名执行querySvnRepoIdBySvnRepoName得到svnRepoId，
+	 * 然后根据SVN用户名和仓库名执行querySvnUser()得到svnUserId，
+	 * 然后根据svnUserId和svnPath查询记录个数，记录非0时修改svnUserAuthz信息，为0时新增svnUserAuthz信息
+	 * @param svnUserAuthz
+	 * @return 保存记录条数
+	 */
+	@Override
+	public int saveSvnUserRight(SvnUserAuthz svnUserAuthz) {
+		logger.info("SvnUserRightServiceImpl.saveSvnUserRight() start");
+
+		int res = 0;
+		//根据svnUserId和svnPath查询记录个数
+		int cnt = svnUserRightDao.countBySvnUserIdAndSvnPath(svnUserAuthz.getSvnUserId(),
+				svnUserAuthz.getSvnPath());
+		if(cnt == 0) {
+			//cnt为0时将svnUserAuthz写入svn_user_authz表
+			res = svnUserRightDao.addSvnUserRight(svnUserAuthz);
+			logger.info("添加" + res + "条SVN用户权限完成");
+		} else {
+			//cnt非0时将修改SVN用户权限信息写入数据库
+			res = svnUserRightDao.updateSvnUserRight(svnUserAuthz);
+			logger.info("修改SVN用户权限信息写入数据库成功");
+		}
+		logger.info("SvnUserRightServiceImpl.saveSvnUserRight() end");
+		return res;
+	}
+	
+	
+	/**
+	 * 根据SVN用户名和仓库名查询用户SVN权限，首先根据SVN库名执行querySvnRepoIdBySvnRepoName得到svnRepoId，
+	 * 然后根据SVN用户名和svnRepoId执行querySvnUser()得到svnUserId，
+	 * 接着根据svnUserId查询该用户在该仓库下的svn权限信息集
+	 * @param svnUserId
+	 */
+	@Override
+	public List<SvnUserAuthzInfo> querySvnUserRight(Map<String, Object> params) {
+		logger.info("SvnUserRightServiceImpl.querySvnUserRight() start");
+		//从数据库查询SVN用户权限信息
+		List<SvnUserAuthzInfo> list = svnUserRightDao.querySvnUserRight(params);
+		logger.info("从数据库查询SVN用户权限信息成功");
+		logger.info("SvnUserRightServiceImpl.querySvnUserRight() end");
+		return list;
+	}
+
+	/**
+	 * 根据SVN用户名和仓库名查询用户SVN权限，首先根据SVN库名执行querySvnRepoIdBySvnRepoName得到svnRepoId，
+	 * 然后根据SVN用户名和svnRepoId执行querySvnUser()得到svnUserId，
+	 * 接着根据svnUserId查询该用户在该仓库下的svn权限信息集
+	 * @param svnUserId
+	 */
+	@Override
+	public List<SvnUserAuthzInfo> querySvnUserRightBySvnUserId(Map<String, Object> params) {
+		logger.info("SvnUserRightServiceImpl.querySvnUserRightBySvnUserId() start");
+		//从数据库查询SVN用户权限信息
+		List<SvnUserAuthzInfo> list = svnUserRightDao.querySvnUserRightBySvnUserId(params);
+		logger.info("从数据库查询SVN用户权限信息成功");
+		logger.info("SvnUserRightServiceImpl.querySvnUserRightBySvnUserId() end");
+		return list;
+	}
+	
+	/**
+	 * 删除用户SVN权限
+	 * 根据SVN用户名和仓库名执行querySvnUser()得到svnUserId，
+	 * 接着根据svnUserId和svnPath查询记录个数，记录非0时删除用户SVN权限
+	 * @param svnUserId, svnRepoName, svnPath
+	 */
+	@Override
+	public int deleteSvnUserRight(long svnUserId, String svnRepoName, String svnPath) {
+		logger.info("SvnUserRightServiceImpl.deleteSvnUserRight() start");	
+		//根据svn仓库名查询svn仓库id
+		String svnRepoIdStr = svnRepoDao.querySvnRepoIdBySvnRepoName(svnRepoName);
+		long svnRepoId = 0;
+		if("".equals(svnRepoIdStr) || svnRepoIdStr == null) {
+			logger.error("svn_repo数据表中不存在svn仓库名为'" + svnRepoName + "'的记录");
+			
+			return -1;
+		} else {
+			svnRepoId = Long.parseLong(svnRepoIdStr);		
+		}
+		
+		// 如果资源没有[],自动加上
+		svnPath = this.formatRes(svnRepoId, svnPath);
+		
+		int res = 0;
+		// 根据svnUserId和svnPath查询记录个数
+		res = svnUserRightDao.countBySvnUserIdAndSvnPath(svnUserId,	svnPath);
+		if(res == 0) {
+			logger.error("svn_user_authz表中不存在svnUserId=" + svnUserId + ", svnPath=" + svnPath + "的记录");
+		} else {
+			// res不为0时，将删除SVN用户权限写入数据库
+			res = 0;
+			res = svnUserRightDao.deleteSvnUserRight(svnUserId, svnPath);
+			if(res == 0) {
+				logger.info("删除操作异常");
+			} else {
+				logger.info("删除SVN用户权限写入数据库成功");
+			}
+			logger.info("SvnUserRightServiceImpl.deleteSvnUserRight() end");
+		}
+		return res;
+		
+	}
+
+	/**
+	 * 删除用户SVN权限，首先根据svnUserName执行querySvnUserIdBySvnUserName()得到svnUserId集，
+	 * 然后根据svnUserId查询记录个数，记录非0时删除用户SVN权限，
+	 * 根据svnUserId集逐个删除用户SVN权限
+	 * 即删除所有与用户名为svnUserName相关的权限信息
+	 * @param svnUserId
+	 */
+	@Override
+	public int deleteSvnUserRightBySvnUserId(long svnUserId) {
+		logger.info("SvnUserRightServiceImpl.deleteSvnUserRightBySvnUserId() start");
+
+		//将删除SVN用户权限写入数据库
+		int res = 0;
+		res = svnUserRightDao.deleteSvnUserRightBySvnUserId(svnUserId);
+		if(res == 0) {
+			logger.info("删除操作异常");
+		} else {
+			logger.info("删除SVN用户权限写入数据库成功");
+		}
+		logger.info("SvnUserRightServiceImpl.deleteSvnUserRightBySvnUserId() end");
+		return res;
+	}
+
+	/**
+	 * 根据SVN用户名查询svn用户id集
+	 * @param svnUserName
+	 */
+	@Override
+	public List<String> querySvnUserIdBySvnUserName(String svnUserName) {
+		logger.info("SvnUserRightServiceImpl.querySvnUserIdBySvnUserName() start");
+		List<String> list = svnUserRightDao.querySvnUserIdBySvnUserName(svnUserName);
+		logger.info("根据SVN用户名查询svn用户id集成功");
+		logger.info("SvnUserRightServiceImpl.querySvnUserIdBySvnUserName() end");
+		return list;
+	}
+
+	/**
+	 * 根据SVN用户id查询svn_user_authz表中记录个数
+	 * @param svnUserId
+	 */
+	@Override
+	public int countBySvnUserId(long svnUserId) {
+		logger.info("SvnUserRightServiceImpl.countBySvnUserId() start");
+		int res = 0;
+		res = svnUserRightDao.countBySvnUserId(svnUserId);
+		if(res == 0) {
+			logger.info("svn_user_authz表中不存在id为'" + svnUserId + "'的SVN用户记录");
+		}
+		logger.info("SvnUserRightServiceImpl.countBySvnUserId() end");
+		return res;
+	}
+
+	/**
+	 * 根据SVN用户id和SVN路径查询svn_user_authz表中记录个数
+	 * @param svnUserId,svnPath
+	 */
+	@Override
+	public int countBySvnUserIdAndSvnPath(long svnUserId, String svnPath) {
+		logger.info("SvnUserRightServiceImpl.countBySvnUserIdAndSvnPath() start");
+		int res = 0;
+		res = svnUserRightDao.countBySvnUserIdAndSvnPath(svnUserId, svnPath);
+		if(res == 0) {
+			logger.info("svn_user_authz表中不存在id为'" + svnUserId + "', svn路径为'" + svnPath + "'的记录");
+		}
+		logger.info("SvnUserRightServiceImpl.countBySvnUserIdAndSvnPath() end");
+		return res;
+	}
+	
+	/**
+	 * 格式化资源.如果资源没有[],自动加上[relateRoot:/]
+	 * @param svnRepoId 项目id
+	 * @param res 资源
+	 * @return 格式化后的资源
+	 */
+	@Override
+	public String formatRes(long svnRepoId, String res) {
+		//如果资源没有[],自动加上
+//		if(!res.startsWith("[") && !res.endsWith("]")){
+			SvnRepo svnRepo = svnRepoDao.querySvnRepoBySvnRepoId(svnRepoId);
+			return this.formatRes(svnRepo, res);
+//		}
+//		return res;
+	}
+	
+	/**
+	 * 格式化资源.如果资源没有[],自动加上[relateRoot:/]
+	 * @param svnRepo 项目
+	 * @param res 资源
+	 * @return 格式化后的资源
+	 */
+	@Override
+	public String formatRes(SvnRepo svnRepo, String res) {
+		//去除[xxx:]，重新加上[relateRoot:/]，防止跨项目授权
+		res = StringUtils.replaceEach(res, new String[]{"[","]"}, new String[]{"",""});
+		if (res.indexOf(":")!=-1) {
+			res = StringUtils.substringAfter(res, ":");
+		}
+		
+		//如果资源没有[],自动加上
+		String relateRoot = svnRepoService.getRelateRootPath(svnRepo);
+		if(!res.startsWith("[") && !res.endsWith("]")){
+			if(res.startsWith("/")){
+				return "["+relateRoot+":"+res+"]";
+			}else{
+				return  "["+relateRoot+":/"+res+"]";
+			}
+		}
+		return res;
+	}
+
+
+	/**
+	 * 根据SVN用户名和仓库名查询用户SVN权限
+	 * @param params
+	 * @return
+	 */
+	@Override
+	public List<SvnUserAuthzInfo> querySvnRight(Map<String, Object> params) {
+		logger.info("SvnUserRightServiceImpl.querySvnRight() start");
+		// 从数据库查询SVN用户权限信息
+		List<SvnUserAuthzInfo> list = svnUserRightDao.querySvnRight(params);
+		logger.info("从数据库查询SVN用户权限信息成功");
+		logger.info("SvnUserRightServiceImpl.querySvnRight() end");
+		return list;
+	}
+
+
+	/**
+	 * 根据SVN用户名和仓库名查询用户SVN权限记录数
+	 * @param params
+	 * @return
+	 */
+	@Override
+	public int countSvnRight(Map<String, Object> params) {
+		logger.info("SvnUserRightServiceImpl.countSvnRight() start");
+		int res = 0;
+		res = svnUserRightDao.countSvnRight(params);
+		logger.info("SvnUserRightServiceImpl.countSvnRight() end");
+		return res;
+	}
+
+}

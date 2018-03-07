@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.bmtc.task.dao.TaskScriptDao">
+
+	<resultMap id="TaskScriptResultMap" type="com.bmtc.task.domain.TaskScriptDO" >
+		<id column="id" property="id" />
+		<result column="task_id" property="taskId" />
+		<result column="script_id" property="scriptId" />
+		<result column="checked_case_name" property="checkedCaseName" />
+	</resultMap>
+	
+	<select id="get" resultType="com.bmtc.task.domain.TaskScriptDO">
+		select
+		`id`,
+		`task_id`,
+		`script_id`,
+		`checked_case_name`
+		from test_task_script 
+		where 
+		id = #{value}
+	</select>
+	
+	<select id="getTaskScript" resultMap="TaskScriptResultMap">
+		SELECT
+		`id`,
+		`task_id`,
+		`script_id`,
+		`checked_case_name`
+		FROM
+		test_task_script
+		WHERE
+		task_id = #{taskId}
+		and
+		script_id = #{scriptId}
+	</select>
+	
+	<select id="getTaskScriptByTaskId" resultMap="TaskScriptResultMap">
+		SELECT
+		`id`,
+		`task_id`,
+		`script_id`,
+		`checked_case_name`
+		FROM
+		test_task_script
+		WHERE
+		task_id = #{taskId}
+	</select>
+
+	<select id="getScript" resultType="com.bmtc.script.domain.Script">
+		SELECT *
+		FROM test_script ts
+		LEFT JOIN test_task_script tts 
+		ON ts.script_id = tts.script_id
+		LEFT JOIN test_task tt 
+		ON tt.task_id = tts.task_id
+		WHERE 
+		tt.task_id = #{taskId}
+	</select>
+	
+	<select id="list" resultType="com.bmtc.task.domain.TaskScriptDO">
+		select
+		`id`,
+		`task_id`,
+		`script_id`,
+		`checked_case_name`
+		from test_task_script
+		<where>
+			<if test="id != null and id != ''"> and id = #{id} </if>
+			<if test="taskId != null and taskId != ''"> and task_id = #{taskId} </if>
+			<if test="scriptId != null and scriptId != ''"> and script_id = #{scriptId} </if>
+			<if test="checkedCaseName != null and checkedCaseName != ''"> and checked_case_name = #{checkedCaseName} </if>
+		</where>
+ 		<choose>
+			<when test="sort != null and sort.trim() != ''">
+				order by ${sort} ${order}
+			</when>
+			<otherwise>
+				order by id desc
+			</otherwise>
+		</choose>
+		<if test="offset != null and limit != null">
+			limit #{offset}, #{limit}
+		</if>
+	</select>
+
+	<select id="count" resultType="int">
+		select count(*) from test_task_script
+		<where>
+			<if test="id != null and id != ''"> and id = #{id} </if>
+			<if test="taskId != null and taskId != ''"> and task_id = #{taskId} </if>
+			<if test="scriptId != null and scriptId != ''"> and script_id = #{scriptId} </if>
+			<if test="checkedCaseName != null and checkedCaseName != ''"> and checked_case_name = #{checkedCaseName} </if>
+		</where>
+	</select>
+
+	<insert id="save" parameterType="com.bmtc.task.domain.TaskScriptDO"
+		useGeneratedKeys="true" keyProperty="id">
+		insert into test_task_script
+		(
+		`task_id`,
+		`script_id`,
+		`checked_case_name`
+		)
+		values
+		(
+		#{taskId},
+		#{scriptId},
+		#{checkedCaseName}
+		)
+	</insert>
+
+	<update id="update" parameterType="com.bmtc.task.domain.TaskScriptDO">
+		update test_task_script
+		<set>
+			<if test="taskId != null">`task_id` = #{taskId}, </if>
+			<if test="scriptId != null">`script_id` = #{scriptId}</if>
+			<if test="checkedCaseName != null">`checked_case_name` = #{checkedCaseName}</if>
+		</set>
+		where task_id = #{id}
+	</update>
+
+	<delete id="remove">
+		delete from test_task_script where task_id = #{taskId}
+	</delete>
+
+</mapper>

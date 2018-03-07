@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.bmtc.task.dao.TaskSceneDao">
+	
+	<select id="get" resultType="com.bmtc.task.domain.TaskSceneDO">
+		select
+		`id`,
+		`task_id`,
+		`scene_id`
+		from test_task_scene 
+		where 
+		id = #{value}
+	</select>
+
+	<select id="list" resultType="com.bmtc.task.domain.TaskSceneDO">
+		select
+		`id`,
+		`task_id`,
+		`scene_id`
+		from test_task_scene
+		<where>
+			<if test="id != null and id != ''"> and id = #{id} </if>
+			<if test="taskId != null and taskId != ''"> and task_id = #{taskId} </if>
+			<if test="sceneId != null and sceneId != ''"> and scene_id = #{sceneId} </if>
+		</where>
+		<choose>
+			<when test="sort != null and sort.trim() != ''">
+				order by ${sort} ${order}
+			</when>
+			<otherwise>
+				order by id desc
+			</otherwise>
+		</choose>
+		<if test="offset != null and limit != null">
+			limit #{offset}, #{limit}
+		</if>
+	</select>
+
+	<select id="count" resultType="int">
+		select count(*) from test_task_scene
+		<where>
+			<if test="id != null and id != ''"> and id = #{id} </if>
+			<if test="taskId != null and taskId != ''"> and task_id = #{taskId} </if>
+			<if test="sceneId != null and sceneId != ''"> and scene_id = #{sceneId} </if>
+		</where>
+	</select>
+
+	<insert id="save" parameterType="com.bmtc.task.domain.TaskSceneDO"
+		useGeneratedKeys="true" keyProperty="id">
+		insert into test_task_scene
+		(
+		`task_id`,
+		`scene_id`
+		)
+		values
+		(
+		#{taskId},
+		#{sceneId}
+		)
+	</insert>
+
+	<update id="update" parameterType="com.bmtc.task.domain.TaskSceneDO">
+		update test_task_scene
+		<set>
+			<if test="taskId != null">`task_id` = #{taskId}, </if>
+			<if test="sceneId != null">`scene_id` = #{sceneId}</if>
+		</set>
+		where task_id = #{taskId}
+	</update>
+
+	<delete id="remove">
+		delete from test_task_scene where task_id = #{taskId}
+	</delete>
+
+<!-- 	<delete id="batchRemove">
+		delete from test_task where task_id in
+		<foreach item="taskId" collection="array" open="(" separator=","
+			close=")">
+			#{taskId}
+		</foreach>
+	</delete>
+ -->
+</mapper>

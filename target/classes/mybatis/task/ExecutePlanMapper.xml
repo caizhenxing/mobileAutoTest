@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.bmtc.task.dao.ExecutePlanDao">
+	<resultMap type="com.bmtc.task.domain.ExecutePlan" id = "rExecutePlan">
+		<id property = "id" column = "id"/>
+		<id property = "taskId" column = "task_id"/>
+		<result property = "taskName" column = "task_name" />
+		<result property = "triggerMode" column = "trigger_mode" />
+		<result property = "condition" column = "condition" />
+		<result property = "deviceType" column = "device_type" />
+		<result property = "status" column = "status" />
+	</resultMap>
+	
+	<select id="get" resultType="com.bmtc.task.domain.ExecutePlan" resultMap="rExecutePlan">
+		select
+		`id`,
+		`task_id`,
+		`task_name`,
+		`trigger_mode`,
+		`condition`,
+		`device_type`,
+		`status`
+		from test_execute_plan 
+		where 
+		id = #{value}
+	</select>
+	<select id="getExecutePlanByTaskId" resultType="com.bmtc.task.domain.ExecutePlan" resultMap="rExecutePlan">
+		select
+		`id`,
+		`task_id`,
+		`task_name`,
+		`trigger_mode`,
+		`condition`,
+		`device_type`,
+		`status`
+		from test_execute_plan 
+		where 
+		task_id = #{value}
+	</select>
+
+	<select id="list" resultType="com.bmtc.task.domain.ExecutePlan">
+		select
+		`id`,
+		`task_id`,
+		`task_name`,
+		`trigger_mode`,
+		`condition`,
+		`device_type`,
+		`status`
+		from test_execute_plan
+		<where>
+			<if test="id != null and id != ''"> and id = #{id} </if>
+			<if test="taskId != null and taskId != ''"> and task_id = #{taskId} </if>
+			<if test="taskName != null and taskName != ''"> and task_name = #{taskName} </if>
+			<if test="triggerMode != null and triggerMode != ''"> and trigger_mode = #{triggerMode} </if>
+			<if test="condition != null and condition != ''"> and condition = #{condition} </if>
+			<if test="deviceType != null and deviceType != ''"> and device_type = #{deviceType} </if>
+			<if test="status != null and status != ''"> and status = #{status} </if>
+			<if test="token != null and token != ''"> and token = #{token} </if>
+		</where>
+		<choose>
+			<when test="sort != null and sort.trim() != ''">
+				order by ${sort} ${order}
+			</when>
+			<otherwise>
+				order by id desc
+			</otherwise>
+		</choose>
+		<if test="offset != null and limit != null">
+			limit #{offset}, #{limit}
+		</if>
+	</select>
+
+	<select id="count" resultType="int">
+		select count(*) from test_execute_plan
+		<where>
+			<if test="id != null and id != ''"> and id = #{id} </if>
+			<if test="taskId != null and taskId != ''"> and task_id = #{taskId} </if>
+			<if test="taskName != null and taskName != ''"> and task_name = #{taskName} </if>
+			<if test="triggerMode != null and triggerMode != ''"> and trigger_mode = #{triggerMode} </if>
+			<if test="condition != null and condition != ''"> and condition = #{condition} </if>
+			<if test="deviceType != null and deviceType != ''"> and device_type = #{deviceType} </if>
+			<if test="status != null and status != ''"> and status = #{status} </if>
+		</where>
+	</select>
+
+	<insert id="save" parameterType="com.bmtc.task.domain.ExecutePlan"
+		useGeneratedKeys="true" keyProperty="id">
+		insert into test_execute_plan
+		(
+		`id`,
+		`task_id`,
+		`task_name`,
+		`trigger_mode`,
+		`condition`,
+		`device_type`,
+		`status`
+		)
+		values
+		(
+		#{id},
+		#{taskId},
+		#{taskName},
+		#{triggerMode},
+		#{condition},
+		#{deviceType},
+		#{status}
+		)
+	</insert>
+
+	<update id="update" parameterType="com.bmtc.task.domain.ExecutePlan">
+		update test_execute_plan
+		<set>
+			<if test="taskId != null">`task_id` = #{taskId}, </if>
+			<if test="taskName != null">`task_name` = #{taskName}, </if>
+			<if test="triggerMode != null">`trigger_mode` = #{triggerMode}, </if>
+			<if test="condition != null">`condition` = #{condition}, </if>
+			<if test="deviceType != null">`device_type` = #{deviceType}, </if>
+			<if test="status != null">`status` = #{status}</if>
+		</set>
+		where id = #{id}
+	</update>
+
+	<delete id="remove">
+		delete from test_execute_plan where id = #{value}
+	</delete>
+
+	<delete id="batchRemove">
+		delete from test_execute_plan where id in
+		<foreach item="id" collection="array" open="(" separator=","
+			close=")">
+			#{id}
+		</foreach>
+	</delete>
+
+</mapper>

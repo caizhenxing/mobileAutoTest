@@ -1,0 +1,108 @@
+package com.bmtc.script.domain;
+
+import java.io.Serializable;
+import java.sql.Date;
+import java.util.List;
+
+import com.bmtc.scene.domain.Scene;
+
+/**
+ * 脚本实体类
+ * @author Administrator
+ *
+ */
+public class Script implements Serializable{
+
+	/**
+	 * 属性
+	 */
+	private static final long serialVersionUID = 1L;
+	// 脚本ID
+	private Long scriptId;
+	// 脚本名称
+	private String scriptName;
+	// 标签
+	private String tag;
+	// 测试套路径
+	private String testSuitPath;
+	// 修改用户ID
+	private Long updateUserId;
+	// 修改时间
+	private Date gmtModified;
+	// 所属场景
+	private List<Scene> scenes;
+	// 关联案例名称
+	private String caseNames;
+	/**
+	 * 构造
+	 */
+	public Script() {
+		super();
+	}
+	/**
+	 * set/get
+	 */
+	public Long getScriptId() {
+		return scriptId;
+	}
+	public void setScriptId(Long scriptId) {
+		this.scriptId = scriptId;
+	}
+	public String getScriptName() {
+		return scriptName;
+	}
+	public void setScriptName(String scriptName) {
+		this.scriptName = scriptName;
+	}
+	public String getTag() {
+		return tag;
+	}
+	public void setTag(String tag) {
+		this.tag = tag;
+	}
+	public String getTestSuitPath() {
+		return testSuitPath;
+	}
+	public void setTestSuitPath(String testSuitPath) {
+		this.testSuitPath = testSuitPath;
+	}
+	public Long getUpdateUserId() {
+		return updateUserId;
+	}
+	public void setUpdateUserId(Long updateUserId) {
+		this.updateUserId = updateUserId;
+	}
+	public Date getGmtModified() {
+		return gmtModified;
+	}
+	public void setGmtModified(Date gmtModified) {
+		this.gmtModified = gmtModified;
+	}
+	public List<Scene> getScenes() {
+		return scenes;
+	}
+	public void setScenes(List<Scene> scenes) {
+		this.scenes = scenes;
+	}
+	public String getCaseNames() {
+		return caseNames;
+	}
+	public void setCaseNames(String caseNames) {
+		this.caseNames = caseNames;
+	}
+	public static long getSerialversionuid() {
+		return serialVersionUID;
+	}
+	/**
+	 * toString
+	 */
+	@Override
+	public String toString() {
+		return "Script [scriptId=" + scriptId + ", scriptName=" + scriptName
+				+ ", tag=" + tag + ", testSuitPath=" + testSuitPath
+				+ ", updateUserId=" + updateUserId + ", gmtModified="
+				+ gmtModified + ", scenes=" + scenes + ", caseNames="
+				+ caseNames + "]";
+	}
+	
+}

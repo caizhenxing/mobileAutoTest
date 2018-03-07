@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+<head th:include="include :: header"></head>
+<body class="gray-bg">
+	<div class="wrapper wrapper-content animated fadeInRight">
+		<div class="row">
+			<div class="col-sm-12">
+ 				<form id="searchSvnPath">
+					<input type="search" id="svnPath" class="bmtcSvnPathSearch-control"
+							   placeholder="SVN路径"/>
+					<button type="submit" class="btn btn-success">搜索</button>
+				</form>			
+				<div class="ibox-content">			
+					<input type="hidden" id="svnRepoName" name="svnRepoName" th:value="${svnRepoName}"/>
+					<div class="col-sm-8 col-sm-offset-5" id="showLoading"></div>
+					<div id="svnPathTree"></div>
+				</div>
+				<div class="form-group hidden">
+					<div class="col-sm-12 col-sm-offset-12">
+						<button type="submit" class="btn btn-primary">提交</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div th:include="include :: footer"></div>
+	<script type="text/javascript">
+		$(document).ready(function() {
+			var svnRepoName = $("#svnRepoName").val();
+			getTreeData(svnRepoName);
+		});
+		function getTreeData(svnRepoName) {
+			$.ajax({
+				type : "POST",
+				url : "/svn/svnUserRight/tree",
+				data : {
+					'svnRepoName' : svnRepoName
+				},
+				beforeSend : beforeSend, //用于在向服务器发送请求之前执行显示进度条
+				async : true, //异步
+				success : function(tree) {
+					loadTree(tree);
+				},
+				complete : complete
+			});
+		}
+
+		function beforeSend(XMLHttpRequest) {
+			// 显示进度条
+			$("#showLoading").append("<div><img src='/img/loading-bar.gif' /><div>");
+		}
+		
+		function complete(XMLHttpRequest, textStatus) {
+			// 隐藏进度条
+			$("#showLoading").remove();
+		}
+
+		function loadTree(tree) {
+			$('#svnPathTree').jstree({
+				'core' : {
+					'data' : tree
+				},
+				"plugins" : [ "search" ]
+			});
+			$("#searchSvnPath").submit(function (e) {
+				e.preventDefault();
+				$("#svnPathTree").jstree(true).search($("#svnPath").val());
+			});
+			$('#svnPathTree').jstree().open_all();
+		}
+		$('#svnPathTree').on("changed.jstree", function(e, data) {
+			var svnPath;
+		   //若为根节点，则将svn路径赋值为根路径"/";否则获取当前节点的id，即相对于svn仓库的路径
+			if(data.node.id == -2) {
+				parent.loadSvnPath("/");
+				svnPath = "/";
+				var con = confirm("获取svn目录树形结构失败，请先给超级用户开通相应仓库的根目录读写权限");
+			} else if(data.node.id == -1) {
+				parent.loadSvnPath("/");
+				svnPath = "/";
+			} else {
+				parent.loadSvnPath(data.node.id);
+				svnPath = data.node.id;
+			}
+			var con = confirm("您选中的SVN路径为：" + svnPath);
+			var index = parent.layer.getFrameIndex(window.name); // 获取窗口索引
+			if(con == true) parent.layer.close(index);
+		});
+	</script>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+<head th:include="include::header"></head>
+<body class="gray-bg">
+	<div class="wrapper wrapper-content animated fadeInRight">
+		<div class="row">
+			<div class="col-sm-12">
+				<div class="ibox float-e-margins">
+					<div class="ibox-content">
+					
+						<!-- 脚本树形结构展示的div -->
+						<div class="form-group">
+							<div class="col-sm-8">
+								<div id="scriptTree">
+								</div>
+								
+							</div>
+						</div>
+						
+						<!-- 选好关联脚本后确认的按钮 -->
+						<div class="form-group">
+							<div class="col-sm-8 col-sm-offset-3">
+								<button onclick="setScriptIds()" type="button" class="btn btn-primary">提交</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div th:include="include::footer"></div>
+	<script type="text/javascript">
+		var scriptNames,scriptIds;
+		$(document).ready(function() {
+			getTreeData();
+		});
+		function getTreeData() {
+			$.ajax({
+				type : "GET",
+				url : "/script/getScriptTree",
+				success : function(tree) {
+					loadTree(tree);
+				}
+			});
+		}
+		function loadTree(tree) {
+			$('#scriptTree').jstree({
+				'core' : {
+					'data' : tree
+				},
+				"checkbox" : {
+					"three_state" : true,
+				},
+				"plugins" : [ "wholerow", "checkbox" ]
+			});
+			$('#scriptTree').jstree().open_all();
+		}
+		function setScriptIds() {
+			getAllSelectNodes();
+			parent.loadScripts(scriptIds,scriptNames);
+			var index = parent.layer.getFrameIndex(window.name); // 获取窗口索引
+			parent.layer.close(index);
+		}
+		function getAllSelectNodes() {
+			var ref = $('#scriptTree').jstree(true); // 获得整个树
+			scriptIds = ref.get_selected(); // 获得所有选中节点的，返回值为数组
+			$("#scriptTree").find(".jstree-undetermined").each(function(i, element) {
+				scriptIds.push($(element).closest('.jstree-node').attr("scriptId"));
+			});
+		}
+	</script>
+</body>
+</html>

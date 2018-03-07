@@ -1,0 +1,107 @@
+package com.bmtc.system.service.impl;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.bmtc.system.dao.BatchDao;
+import com.bmtc.system.domain.BatchDO;
+import com.bmtc.system.service.BatchService;
+import com.bmtc.system.utils.GetDataByATP;
+
+/**
+ * 批次service的实现类
+ * @author Administrator
+ *
+ */
+@Service
+@Transactional
+public class BatchServiceImpl implements BatchService{
+	
+	private static final String dataType = "GetBatchList";
+	
+	private static final Logger logger = LoggerFactory
+			.getLogger(BatchServiceImpl.class);
+	
+	@Autowired
+	BatchDao batchMapper;
+	
+	/**
+	 * 查询批次数据
+	 */
+	@Override
+	public List<BatchDO> list() {
+		logger.info("BatchServiceImpl.list() start");
+		List<BatchDO> batch = batchMapper.list(new HashMap<String, Object>());
+		logger.info("BatchServiceImpl.list() end");
+		return batch;
+	}
+	
+	/**
+	 * 保存批次数据
+	 */
+	@Override
+	public void save() {
+		logger.info("BatchServiceImpl.save() start");
+		Map<String, String> map = GetDataByATP.getProducts(dataType) ;
+		for (String str : map.keySet()) {
+			String obj = map.get(str);
+			String[] batchs = obj.split("\\|");
+			BatchDO batch = new BatchDO();
+			if (getBatch(batchs[1]) == null) {
+				batch.setBatchId(Integer.parseInt(batchs[0]));
+				batch.setBatchName(batchs[1]);
+				batchMapper.save(batch);
+			}
+			
+		}
+		logger.info("BatchServiceImpl.save() end");
+	}
+	
+	/**
+	 * 通过批次id获取批次对象
+	 */
+	@Override
+	public BatchDO get(Integer batchId) {
+		logger.info("BatchServiceImpl.get() start");
+		logger.info("BatchServiceImpl.get() end");
+		return batchMapper.get(batchId);
+	}
+	
+	/**
+	 * 通过批次id移除批次对象
+	 */
+	@Override
+	public int remove(Integer batchId) {
+		logger.info("BatchServiceImpl.remove() start");
+		logger.info("BatchServiceImpl.remove() end");
+		return batchMapper.remove(batchId);
+	}
+	
+	/**
+	 * 更新批次
+	 */
+	@Override
+	public int update(BatchDO batch) {
+		logger.info("BatchServiceImpl.update() start");
+		int r = batchMapper.update(batch);
+		logger.info("BatchServiceImpl.update() end");
+		return r;
+	}
+	/**
+	 * 通过批次名获取批次对象
+	 */
+	@Override
+	public BatchDO getBatch(String batchName) {
+		logger.info("BatchServiceImpl.getBatch() start");
+		logger.info("BatchServiceImpl.getBatch() end");
+		return batchMapper.getBatch(batchName);
+	}
+
+}

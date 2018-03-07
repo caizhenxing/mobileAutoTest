@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.bmtc.system.dao.BatchDao">
+
+	<select id="get" resultType="com.bmtc.system.domain.BatchDO">
+		select
+			`batch_id`,
+			`BatchName`,
+			`Description`,
+			`CreateUser`,
+			`StartDate`,
+			`EndDate`,
+			`ModifyUser`,
+			`Deleted`
+		from
+			test_batch
+		where
+			batch_id = #{value}
+	</select>
+	
+	<select id="getBatch" resultType="com.bmtc.system.domain.BatchDO">
+		select
+			`batch_id`,
+			`BatchName`,
+			`Description`,
+			`CreateUser`,
+			`StartDate`,
+			`EndDate`,
+			`ModifyUser`,
+			`Deleted`
+		from 
+			test_batch 
+		where 
+			BatchName = #{value}
+	</select>
+
+	<select id="list" resultType="com.bmtc.system.domain.BatchDO">
+		select
+			`batch_id`,
+			`BatchName`,
+			`Description`,
+			`CreateUser`,
+			`StartDate`,
+			`EndDate`,
+			`ModifyUser`,
+			`Deleted`
+		from 
+			test_batch
+		<where>
+			<if test="batchId != null and batchId != ''">
+			 and batch_id = #{batchId} </if>
+			<if test="batchName != null and batchName != ''">
+			 and BatchName = #{batchName} </if>
+			<if test="description != null and description != ''">
+			 and Description = #{description} </if>
+			<if test="createUser != null and createUser != ''">
+			 and CreateUser = #{createUser} </if>
+			<if test="startDate != null and startDate != ''">
+			 and StartDate = #{startDate} </if>
+			<if test="endDate != null and endDate != ''">
+			 and EndDate = #{endDate} </if>
+			<if test="modifyUser != null and modifyUser != ''">
+			 and ModifyUser = #{modifyUser} </if>
+			<if test="deleted != null and deleted != ''">
+			 and Deleted = #{deleted} </if>
+		</where>
+		<choose>
+			<when test="sort != null and sort.trim() != ''">
+				order by ${sort} ${order}
+			</when>
+			<otherwise>
+				order by batch_id desc
+			</otherwise>
+		</choose>
+		<if test="offset != null and limit != null">
+			limit #{offset}, #{limit}
+		</if>
+	</select>
+
+	<select id="count" resultType="int">
+		select count(*) from test_batch
+		<where>
+			<if test="batchId != null and batchId != ''">
+			 and batch_id = #{batchId} </if>
+			<if test="batchName != null and batchName != ''">
+			 and BatchName = #{batchName} </if>
+			<if test="description != null and description != ''">
+			 and Description = #{description} </if>
+			<if test="createUser != null and createUser != ''">
+			 and CreateUser = #{createUser} </if>
+			<if test="startDate != null and startDate != ''">
+			 and StartDate = #{startDate} </if>
+			<if test="endDate != null and endDate != ''">
+			 and EndDate = #{endDate} </if>
+			<if test="modifyUser != null and modifyUser != ''">
+			 and ModifyUser = #{modifyUser} </if>
+			<if test="deleted != null and deleted != ''">
+			 and Deleted = #{deleted} </if>
+		</where>
+	</select>
+
+	<insert id="save" parameterType="com.bmtc.system.domain.BatchDO"
+		useGeneratedKeys="true" keyProperty="batchId">
+		insert into test_batch
+		(
+		`batch_id`,
+		`BatchName`,
+		`Description`,
+		`CreateUser`,
+		`StartDate`,
+		`EndDate`,
+		`ModifyUser`,
+		`Deleted`
+		)
+		values
+		(
+		#{batchId},
+		#{batchName},
+		#{description},
+		#{createUser},
+		#{startDate},
+		#{endDate},
+		#{modifyUser},
+		#{deleted}
+		)
+	</insert>
+
+	<update id="update" parameterType="com.bmtc.system.domain.BatchDO">
+		update test_batch
+		<set>
+			<if test="batchId != null"> batch_id = #{batchId}, </if>
+			<if test="batchName != null"> BatchName = #{batchName}, </if>
+			<if test="description != null"> Description = #{description}, </if>
+			<if test="createUser != null"> CreateUser = #{createUser}, </if>
+			<if test="startDate != null"> StartDate = #{startDate}, </if>
+			<if test="endDate != null"> EndDate = #{endDate}, </if>
+			<if test="modifyUser != null"> ModifyUser = #{modifyUser} ,</if>
+			<if test="deleted != null">Deleted = #{deleted} </if>
+		</set>
+		where batch_id = #{batchId}
+	</update>
+
+	<delete id="remove">
+		delete from test_batch where batch_id = #{value}
+	</delete>
+
+
+</mapper>

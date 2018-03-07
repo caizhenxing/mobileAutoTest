@@ -1,0 +1,107 @@
+var testSuiteCaseNames;
+var taskId;
+$().ready(function() {
+	$("#part1").show();
+	$("#part2").hide();
+	var testSuiteCaseNames = '';
+	var taskId = $("#taskId").val();
+	getTreeData(taskId);
+	validateRule();
+});
+$.validator.setDefaults({
+	submitHandler : function() {
+		getAllSelectNodes();
+		update();
+	}
+});
+function update() {
+	$.ajax({
+		cache : true,
+		type : "POST",
+		url : "/task/update",
+		data : $('#signupForm').serialize(),// 你的formid
+		async : false,
+		error : function(request) {
+			alert("修改失败，请联系管理员！");
+		},
+		success : function(data) {
+			if (data.code == 0) {
+				parent.layer.msg(data.msg);
+				parent.reLoad();
+				var index = parent.layer.getFrameIndex(window.name); // 获取窗口索引
+				parent.layer.close(index);
+			} else {
+				parent.layer.msg(data.msg);
+				var index = parent.layer.getFrameIndex(window.name); // 获取窗口索引
+				parent.layer.close(index);
+			}
+
+		}
+	});
+
+}
+$(validateRule());
+function toStep12() {
+	if(validateRule().form()){
+		$("#part1").hide();
+		$("#part2").show();
+	}
+}
+function toStep21() {
+		$("#part1").show();
+		$("#part2").hide();
+}
+function validateRule() {
+	var icon = "<i class='fa fa-times-circle'></i> ";
+	return $("#signupForm").validate({
+		rules : {
+			taskName : {
+				required : true
+			},
+			scriptNames : {
+				required : true
+			},
+			svnPath : {
+				required : true
+			},
+			agree : "required"
+		},
+		messages : {
+
+			taskName : {
+				required : icon + "请输入测试任务名称"
+			},
+			scriptNames : {
+				required : icon + "请选择关联脚本"
+			},
+			svnPath : {
+				required : icon + "请输入测试任务的svn路径"
+			},
+		}
+	})
+}
+function getTreeData(taskId) {
+	$.ajax({
+		type : "GET",
+		url : "/task/getTaskUpdateTreeData/" + taskId,// 获得svn库的树形结构路径
+		success : function(tree) {
+			loadTree(tree);
+		}
+	});
+}
+function loadTree(tree) {
+	$('#jstree').jstree({
+		"plugins" : [ "wholerow", "checkbox" ],
+		'core' : {
+			'data' : tree
+		},
+		"checkbox" : {
+		}
+	});
+	$('#jstree').jstree().close_all();
+}
+function getAllSelectNodes() {
+	var ref = $('#jstree').jstree(true); // 获得整个树
+	testSuiteCaseNames = ref.get_selected(); // 获得所有选中节点的，返回值为数组
+	$("#testSuiteCaseNames").val(testSuiteCaseNames);
+}

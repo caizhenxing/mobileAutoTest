@@ -1,0 +1,414 @@
+package com.bmtc.svn.service.impl;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.bmtc.common.utils.BuildTree;
+import com.bmtc.common.utils.R;
+import com.bmtc.svn.common.utils.SvnRepoTree;
+import com.bmtc.svn.dao.SvnRepoDao;
+import com.bmtc.svn.domain.SvnRepo;
+import com.bmtc.svn.domain.SvnUserAuthzInfo;
+import com.bmtc.svn.service.RepositoryService;
+import com.bmtc.svn.service.SvnRepoService;
+import com.bmtc.svn.service.SvnService;
+import com.bmtc.svn.service.SvnUserRightService;
+
+
+/**
+ * SVN用户信息管理业务逻辑实现
+ * @author lpf7161
+ *
+ */
+@Service("SvnRepoService")
+public class SvnRepoServiceImpl implements SvnRepoService {
+	private static Logger logger = Logger.getLogger(SvnRepoServiceImpl.class);
+	
+	@Autowired
+	private SvnRepoDao svnRepoDao;
+	
+	/**
+	 * SVN服务层
+	 */
+	@Resource(name = "SvnService")
+	private SvnService svnService;
+	
+	/**
+	 * SVN权限层
+	 */
+	@Resource(name = "SvnUserRightService")
+	private SvnUserRightService svnUserRightService;
+	
+	/**
+	 * 保存。<br>
+	 * 数据库里已经存在相同的路径或url的项目，不可以保存。<br>
+	 * 如果仓库不存在，自动创建。<br>
+	 * 增加SVN仓库
+	 * @param svnRepo
+	 * @throws Exception 
+	 */
+	@Override
+	public R addSvnRepo(SvnRepo svnRepo) {
+		logger.info("SvnRepoServiceImpl.addSvnRepo() start");	
+		
+		// 路径 把\替换为/
+		if (StringUtils.isNotBlank(svnRepo.getSvnRepoPath())) {
+			svnRepo.setSvnRepoPath(StringUtils.replace(svnRepo.getSvnRepoPath(), "\\", "/"));
+		}
+		
+		// url 把\替换为/
+		if (StringUtils.isNotBlank(svnRepo.getSvnRepoUrl())) {
+			svnRepo.setSvnRepoUrl(StringUtils.replace(svnRepo.getSvnRepoUrl(), "\\", "/"));
+		}
+	
+		// 添加svn://
+		if(!svnRepo.getSvnRepoUrl().startsWith("svn://") && !svnRepo.getSvnRepoUrl().startsWith("SVN://")) {
+			svnRepo.setSvnRepoUrl("svn://" + svnRepo.getSvnRepoUrl());
+		}
+		
+		// url 把SVN://替换为svn://
+		if(svnRepo.getSvnRepoUrl().startsWith("SVN://")) {
+			svnRepo.setSvnRepoUrl(StringUtils.replace(svnRepo.getSvnRepoUrl(), "SVN://", "svn://"));
+		}
+		
+		// 是否可以增加项目
+		// insert为true时，说明svn仓库表中不存在名为svnRepo.getSvnRepoName()的svn仓库，否则存在
+		boolean insert = svnRepoDao.querySvnRepoBySvnRepoName(svnRepo.getSvnRepoName()) == null;
+		if (insert) {
+			// 数据库里已经存在相同的路径或url的项目
+			if (this.svnRepoDao.getCount(svnRepo.getSvnRepoPath(), svnRepo.getSvnRepoUrl()) > 0) {
+				logger.error("数据库里已经存在相同的路径或url的仓库项目，请检查路径或url");
+				return R.error(-1, "数据库里已经存在相同的路径或url的仓库项目，请检查路径或url");
+			}
+		} else {
+			// 数据库里已经存在多个相同的路径或url的项目
+			if (this.svnRepoDao.getCount(svnRepo.getSvnRepoPath(), svnRepo.getSvnRepoUrl()) > 1) {
+				logger.error("数据库里已经存在多个相同的路径或url的仓库项目，请检查路径或url");
+				return R.error(-1, "数据库里已经存在多个相同的路径或url的仓库项目，请检查路径或url");
+			}
+		}
+		
+		// 创建仓库
+		File respository = new File(svnRepo.getSvnRepoPath());
+		if (!respository.exists() || !respository.isDirectory()) {// 不存在仓库，则新建仓库
+			try {
+				RepositoryService.createLocalRepository(respository);
+			} catch (Exception e) {
+				return R.error(-1, e.getMessage());
+			}
+		}
+		
+		int cnt = 0;
+		int res = 0;
+		//根据SVN库名查询是否存在该SVN仓库
+		cnt = svnRepoDao.isExistSvnRepo(svnRepo.getSvnRepoName());
+		if(cnt != 0) {
+			logger.error("svn_repo表中已存在svn库名为'" + svnRepo.getSvnRepoName() + "'的记录");
+			return R.error(-1, "svn_repo表中已存在svn库名为'" + svnRepo.getSvnRepoName() + "'的记录");
+		} else {
+			//cnt为0时添加SVN仓库
+			res = svnRepoDao.addSvnRepo(svnRepo);
+			logger.info("添加" + res + "条SVN仓库信息完成");
+			
+			// 增加默认的权限
+			SvnUserAuthzInfo svnUserAuthzInfo = new SvnUserAuthzInfo();
+			svnUserAuthzInfo.setSvnRepoName(svnRepo.getSvnRepoName());
+			svnUserAuthzInfo.setSvnRepoPath(this.svnUserRightService.formatRes(svnRepo, "/"));
+			svnUserAuthzInfo.setSvnUserAuthz("rw");
+		}
+	
+		// 操作passwd和authz文件，修改svn用户和权限配置
+		try {
+			svnService.exportConfig(svnRepo.getSvnRepoName());
+		} catch (Exception e) {
+			return R.error(-1, e.getMessage());
+		}
+	
+		logger.info("SvnRepoServiceImpl.addSvnRepo() end");
+		if(res > 0) {
+			return R.ok();
+		}
+		return R.error();
+	}
+	
+
+	/**
+	 * 根据SVN库名查询是否存在该SVN仓库
+	 * @param svnRepoName
+	 */
+	@Override
+	public int isExistSvnRepo(String svnRepoName) {
+		logger.info("SvnRepoServiceImpl.isExistSvnRepo() start");
+		int res = 0;
+		res = svnRepoDao.isExistSvnRepo(svnRepoName);
+		logger.info("SvnRepoServiceImpl.isExistSvnRepo() end");
+		return res;
+	}
+
+	/**
+	 * 根据SVN库名删除SVN仓库
+	 * @param svnRepoName
+	 */
+	@Override
+	public int deleteSvnRepo(String svnRepoName) {
+		logger.info("SvnRepoServiceImpl.deleteSvnRepo() start");
+		int cnt = 0;
+		int res = 0;
+		//根据SVN库名查询是否存在该SVN仓库
+		cnt = svnRepoDao.isExistSvnRepo(svnRepoName);
+		if(cnt == 0) {
+			logger.error("svn_repo表中不存在svn库名为'" + svnRepoName + "'的记录");
+		} else {
+			//cnt不为0时，将删除SVN仓库写入数据库
+			res = svnRepoDao.deleteSvnRepo(svnRepoName);
+			if(res == 0) {
+				logger.error("删除操作异常");
+			} else {
+				logger.info("删除SVN用户写入数据库成功");
+			}
+			logger.info("SvnRepoServiceImpl.deleteSvnRepo() end");
+		}
+		
+		return res;
+	}
+
+	/**
+	 * 根据SVN库名修改SVN仓库
+	 * @param svnRepo
+	 */
+	@Override
+	public int updateSvnRepo(SvnRepo svnRepo) {
+		logger.info("SvnRepoServiceImpl.updateSvnRepo() start");
+		// 路径 把\替换为/
+		if (StringUtils.isNotBlank(svnRepo.getSvnRepoPath())) {
+			svnRepo.setSvnRepoPath(StringUtils.replace(svnRepo.getSvnRepoPath(), "\\", "/"));
+		}
+		
+		// url 把\替换为/
+		if (StringUtils.isNotBlank(svnRepo.getSvnRepoUrl())) {
+			svnRepo.setSvnRepoUrl(StringUtils.replace(svnRepo.getSvnRepoUrl(), "\\", "/"));
+		}
+		
+		// 添加svn://
+		if(!svnRepo.getSvnRepoUrl().startsWith("svn://") && !svnRepo.getSvnRepoUrl().startsWith("SVN://")) {
+			svnRepo.setSvnRepoUrl("svn://" + svnRepo.getSvnRepoUrl());
+		}
+		
+		// url 把SVN://替换为svn://
+		if(svnRepo.getSvnRepoUrl().startsWith("SVN://")) {
+			svnRepo.setSvnRepoUrl(StringUtils.replace(svnRepo.getSvnRepoUrl(), "SVN://", "svn://"));
+		}
+		
+		int cnt;
+		int res = 0;
+		//根据SVN库名查询是否存在该SVN仓库
+		cnt = svnRepoDao.isExistSvnRepo(svnRepo.getSvnRepoName());
+		if(cnt == 0) {
+			logger.error("svn_repo表中不存在svn库名为'" + svnRepo.getSvnRepoName() + "'的记录");
+		} else {
+			//将修改SVN仓库信息写入数据库
+			res = svnRepoDao.updateSvnRepo(svnRepo);
+			logger.info("根据svnRepoName修改" + res + "条SVN仓库完成");
+		}
+		
+		logger.info("SvnRepoServiceImpl.updateSvnRepo() end");
+		return res;
+	}
+
+	/**
+	 * 保存SVN仓库，若存在此仓库（根据仓库名判断）则修改，否则新增
+	 * @param svnRepo
+	 * @return 保存记录条数
+	 */
+	@Override
+	public int saveSvnRepo(SvnRepo svnRepo) {
+		logger.info("SvnRepoServiceImpl.saveSvnRepo() start");
+		// 路径 把\替换为/
+		if (StringUtils.isNotBlank(svnRepo.getSvnRepoPath())) {
+			svnRepo.setSvnRepoPath(StringUtils.replace(svnRepo.getSvnRepoPath(), "\\", "/"));
+		}
+		
+		// url 把\替换为/
+		if (StringUtils.isNotBlank(svnRepo.getSvnRepoUrl())) {
+			svnRepo.setSvnRepoUrl(StringUtils.replace(svnRepo.getSvnRepoUrl(), "\\", "/"));
+		}
+		
+		// 添加svn://
+		if(!svnRepo.getSvnRepoUrl().startsWith("svn://") && !svnRepo.getSvnRepoUrl().startsWith("SVN://")) {
+			svnRepo.setSvnRepoUrl("svn://" + svnRepo.getSvnRepoUrl());
+		}
+		
+		// url 把SVN://替换为svn://
+		if(svnRepo.getSvnRepoUrl().startsWith("SVN://")) {
+			svnRepo.setSvnRepoUrl(StringUtils.replace(svnRepo.getSvnRepoUrl(), "SVN://", "svn://"));
+		}
+		int cnt;
+		int res = 0;
+		//根据SVN库名查询是否存在该SVN仓库
+		cnt = svnRepoDao.isExistSvnRepo(svnRepo.getSvnRepoName());
+		if(cnt == 0) {
+			//cnt为0时添加SVN仓库
+			res = svnRepoDao.addSvnRepo(svnRepo);
+			logger.info("添加" + res + "条SVN仓库信息完成");
+		} else {
+			//将修改SVN仓库信息写入数据库
+			res = svnRepoDao.updateSvnRepo(svnRepo);
+			logger.info("根据svnRepoName修改" + res + "条SVN仓库完成");
+		}
+		
+		logger.info("SvnRepoServiceImpl.saveSvnRepo() end");
+		return res;
+	}
+	
+	/**
+	 * 查询svn仓库记录数
+	 * @param 
+	 */
+	@Override
+	public int countSvnRepo(Map<String, Object> params) {
+		logger.info("SvnRepoServiceImpl.countSvnRepo() start");
+		int res = 0;
+		res = svnRepoDao.countSvnRepo(params);
+		logger.info("SvnRepoServiceImpl.countSvnRepo() end");
+		return res;
+	}
+
+	/**
+	 * 查询svn仓库信息
+	 * @param 
+	 */
+	@Override
+	public List<SvnRepo> querySvnRepo(Map<String, Object> params) {
+		logger.info("SvnRepoServiceImpl.querySvnRepo() start");
+		//从数据库查询SVN仓库信息
+		List<SvnRepo> list = svnRepoDao.querySvnRepo(params);
+		logger.info("SvnRepoServiceImpl.querySvnRepo() end");
+		return list;
+	}
+
+	/**
+	 * 根据svn仓库名从svn仓库表中查询仓库信息
+	 * @param svnRepoName
+	 */
+	@Override
+	public SvnRepo querySvnRepoBySvnRepoName(String svnRepoName) {
+		logger.info("SvnRepoServiceImpl.querySvnRepo() start");
+		//从数据库查询SVN仓库信息
+		SvnRepo svnRepo = svnRepoDao.querySvnRepoBySvnRepoName(svnRepoName);
+		logger.info("SvnRepoServiceImpl.querySvnRepo() end");
+		return svnRepo;
+	}
+	
+	/**
+	 * 根据svn仓库名从svn仓库表中查询仓库id
+	 * @param svnRepoName
+	 */
+	@Override
+	public String querySvnRepoIdBySvnRepoName(String svnRepoName) {
+		logger.info("SvnRepoServiceImpl.querySvnRepo() start");
+		String res = null;
+		res = svnRepoDao.querySvnRepoIdBySvnRepoName(svnRepoName);
+		
+		logger.info("SvnRepoServiceImpl.querySvnRepo() end");
+		return res;
+	}
+	
+	/**
+	 * 获取项目的相对根路径.例如项目的path=e:/svn/projar，则返回projar。如果path为空，则返回项目ID
+	 * @param pj 项目
+	 * @return 项目的相对根路径
+	 */
+	@Override
+	public String getRelateRootPath(SvnRepo svnRepo) {
+		logger.info("SvnRepoServiceImpl.getRelateRootPath() start");
+		String path = svnRepo.getSvnRepoPath();
+		if(StringUtils.isBlank(path)){
+			return svnRepo.getSvnRepoName();
+		}
+		
+		path = StringUtils.replace(path, "\\", "/");
+		
+		while(path.endsWith("/")){
+			path = path.substring(0, path.length()-1);
+		}
+		
+		logger.info("SvnRepoServiceImpl.getRelateRootPath() end");
+		return StringUtils.substringAfterLast(path, "/");
+	}
+
+	/**
+	 * 根据SVN库id批量删除SVN仓库
+	 * @param svnRepoIds
+	 */
+	@Transactional
+	@Override
+	public int batchRemoveSvnRepo(Long[] svnRepoIds) {
+		logger.info("SvnRepoServiceImpl.batchRemoveSvnRepo() start");
+		int count = svnRepoDao.batchRemoveSvnRepo(svnRepoIds);
+		logger.info("SvnRepoServiceImpl.batchRemoveSvnRepo() end");
+		return count;
+	}
+
+	/**
+	 * 获取SVN仓库树形图数据
+	 */
+/*	@Override
+	public Tree<SvnRepo> getTree() {
+		logger.info("SvnRepoServiceImpl.getTree() start");
+		List<Tree<SvnRepo>> trees = new ArrayList<Tree<SvnRepo>>();
+		//设置树形图标题
+		List<SvnRepo> svnRepos = svnRepoDao.querySvnRepo(new HashMap<String,Object>(5));
+		for (SvnRepo svnRepo : svnRepos) {
+				Tree<SvnRepo> tree = new Tree<SvnRepo>();
+				tree.setId(String.valueOf(svnRepo.getId()));
+				//tree.setParentId(svnRepo.getParentId().toString());
+				tree.setText(svnRepo.getSvnRepoName());
+				Map<String, Object> state = new HashMap<>(5);
+				state.put("closed", true);
+				tree.setState(state);
+				trees.add(tree);
+		}
+		// 默认顶级菜单为0，根据数据库实际情况调整
+		Tree<SvnRepo> t = BuildTree.build(trees);
+		t.setText("SVN仓库");
+		logger.info("SvnRepoServiceImpl.getTree() end");
+		return t;
+	}*/
+	
+	@Override
+	public SvnRepoTree<SvnRepo> getTree() {
+		logger.info("SvnRepoServiceImpl.getTree() start");
+		List<SvnRepoTree<SvnRepo>> trees = new ArrayList<SvnRepoTree<SvnRepo>>();
+		//设置树形图标题
+		List<SvnRepo> svnRepos = svnRepoDao.querySvnRepo(new HashMap<String,Object>(5));
+		for (SvnRepo svnRepo : svnRepos) {
+			SvnRepoTree<SvnRepo> tree = new SvnRepoTree<SvnRepo>();
+			tree.setId(String.valueOf(svnRepo.getId()));
+			tree.setText(svnRepo.getSvnRepoName());
+			tree.setSvnRepoPath(svnRepo.getSvnRepoPath());
+			tree.setSvnRepoUrl(svnRepo.getSvnRepoUrl());
+			tree.setSvnRepoDes(svnRepo.getSvnRepoDes());
+			Map<String, Object> state = new HashMap<>(5);
+			state.put("closed", true);
+			tree.setState(state);
+			trees.add(tree);
+		}
+		// 默认顶级菜单为0，根据数据库实际情况调整
+		SvnRepoTree<SvnRepo> t = BuildTree.buildSvnRepoTree(trees);
+		t.setText("SVN仓库");
+		logger.info("SvnRepoServiceImpl.getTree() end");
+		return t;
+	}
+	
+}

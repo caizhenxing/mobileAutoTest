@@ -1,0 +1,322 @@
+package com.bmtc.svn.service.impl;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.bmtc.svn.common.utils.EncryptUtil;
+import com.bmtc.svn.dao.SvnRepoDao;
+import com.bmtc.svn.dao.SvnUserDao;
+import com.bmtc.svn.domain.SvnUser;
+import com.bmtc.svn.domain.SvnUserRepoInfo;
+import com.bmtc.svn.service.SvnService;
+import com.bmtc.svn.service.SvnUserService;
+
+
+/**
+ * SVN用户信息管理业务逻辑实现
+ * @author lpf7161
+ *
+ */
+@Service("SvnUserService")
+public class SvnUserServiceImpl implements SvnUserService 
+{
+	private static Logger logger = Logger.getLogger(SvnUserServiceImpl.class);
+	
+	@Autowired
+	private SvnUserDao svnUserDao;
+	
+	@Autowired
+	private SvnRepoDao svnRepoDao;
+	
+	/**
+	 * SVN服务层
+	 */
+	@Resource(name = "SvnService")
+	private SvnService svnService;
+	
+	/**
+	 * 增加SVN用户
+	 * @param svnUser
+	 */
+	@Override
+	public int addSvnUser(SvnUser svnUser) {
+		logger.info("SvnUserServiceImpl.addSvnUser() start");
+		//对SVN用户密码进行加密处理
+		svnUser.setSvnPassword(EncryptUtil.encrypt(svnUser.getSvnPassword()));
+		
+		int cnt = 0;
+		int res = 0;
+		//根据SVN用户名和库id查询SVN用户记录数
+		cnt = svnUserDao.countSvnUser(svnUser.getSvnUserName(), svnUser.getSvnRepoId());
+		if(cnt != 0) {
+			logger.info("svn_user表中已存在svn用户名为'" + svnUser.getSvnUserName() 
+					+ "', 库id为'" + svnUser.getSvnRepoId() + "'的记录");
+		} else {
+			//cnt为0时，将svn用户信息写入数据库
+			res = svnUserDao.addSvnUser(svnUser);
+			logger.info("添加" + res + "条SVN用户信息完成");
+		}
+		
+		logger.info("SvnUserServiceImpl.addSvnUser() end");
+		return res;
+	}
+	
+	
+	/**
+	 * 根据SVN用户名和库名删除SVN用户
+	 * @param svnUserName,svnRepoName
+	 */
+	@Override
+	public int deleteSvnUser(String svnUserName, String svnRepoName) {
+		logger.info("SvnUserServiceImpl.deleteSvnUser() start");
+
+		//根据svn仓库名查询svn仓库id
+		String svnRepoIdStr = svnRepoDao.querySvnRepoIdBySvnRepoName(svnRepoName);
+		long svnRepoId = 0;
+		if("".equals(svnRepoIdStr) || svnRepoIdStr == null) {
+			
+			logger.error("svn_repo数据表中不存在svn仓库名为'" + svnRepoName + "'的记录");
+			return 0;
+		} else {
+			svnRepoId = Long.parseLong(svnRepoIdStr);		
+		}
+		
+		int cnt = 0;
+		int res = 0;
+		//根据SVN用户名和库名查询SVN用户记录数
+		cnt = svnUserDao.countSvnUser(svnUserName, svnRepoId);
+		if(cnt == 0) {
+			logger.info("svn_user表中不存在svn用户名为'" + svnUserName + "', 库名为'" + svnRepoName + "'的记录");
+		} else {
+			//将删除SVN用户写入数据库
+			res = svnUserDao.deleteSvnUser(svnUserName, svnRepoId);
+			if(res == 0) {
+				logger.info("根据svnUserName和svnRepoName删除操作异常");
+			} else {
+				logger.info("根据svnUserName和svnRepoName删除" + res + "条SVN用户完成");
+			}
+		}
+		
+		logger.info("SvnUserServiceImpl.deleteSvnUser() end");
+		return res;
+	}
+
+	/**
+	 * 根据SVN用户名查询SVN用户记录数
+	 * @param svnUserName
+	 */
+	@Override
+	public int countSvnUserBySvnUserName(Map<String, Object> params) {
+		logger.info("SvnUserServiceImpl.countSvnUserBySvnUserName() start");
+		int res = 0;
+		res = svnUserDao.countSvnUserBySvnUserName(params);
+		if(res == 0) {
+			logger.info("svn_user表中不存在svn用户名为'" + params.get("svnUserName") + "'的记录");
+		}
+		logger.info("SvnUserServiceImpl.countSvnUserBySvnUserName() end");
+		return res;
+	}
+	
+	/**
+	 * 根据SVN用户名删除SVN用户，即删除所有svn仓库中用户名为svnUserName的用户信息
+	 * @param svnUserName
+	 */
+	@Override
+	public int deleteSvnUserBySvnUserName(String svnUserName) {
+		logger.info("SvnUserServiceImpl.deleteSvnUserBySvnUserName() start");
+		
+		//将删除SVN用户写入数据库
+		int cnt = 0;
+		int res = 0;
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("svnUserName", svnUserName);
+		//根据SVN用户名查询SVN用户记录数
+		cnt = svnUserDao.countSvnUserBySvnUserName(params);
+		if(cnt == 0) {
+			logger.info("svn_user表中不存在svn用户名为'" + svnUserName + "'的记录");
+		} else {
+			res = svnUserDao.deleteSvnUserBySvnUserName(svnUserName);
+			if(res == 0) {
+				logger.info("根据svnUserName删除操作异常");
+			} else {
+				logger.info("根据svnUserName删除" + res + "条SVN用户完成");
+			}
+		}
+		logger.info("SvnUserServiceImpl.deleteSvnUserBySvnUserName() end");
+		return res;
+	}
+
+	/**
+	 * 根据SVN用户名和库名修改SVN用户
+	 * @param svnUser
+	 */
+	@Override
+	public int updateSvnUser(SvnUser svnUser) {
+		logger.info("SvnUserServiceImpl.updateSvnUser() start");
+		//对SVN用户密码进行加密处理
+		svnUser.setSvnPassword(EncryptUtil.encrypt(svnUser.getSvnPassword()));
+		
+		//将修改SVN用户信息写入数据库
+		int cnt = 0;
+		int res = 0;
+		//根据SVN用户名和库名查询SVN用户记录数
+		cnt = svnUserDao.countSvnUser(svnUser.getSvnUserName(), svnUser.getSvnRepoId());
+		if(cnt == 0) {
+			logger.info("svn_user表中不存在svn用户名为'" + svnUser.getSvnUserName() 
+					+ "', 库id为'" + svnUser.getSvnRepoId() + "'的记录");
+		} else {
+			res = svnUserDao.updateSvnUser(svnUser);
+			if(res == 0) {
+				logger.info("根据svnUserName和svnRepoName修改操作异常");
+			} else {
+				logger.info("根据svnUserName和svnRepoName修改" + res + "条SVN用户完成");
+			}
+		}
+		logger.info("SvnUserServiceImpl.updateSvnUser() end");
+		return res;
+	}
+	
+	
+	/**
+	 * 保存SVN用户，若存在此svn用户（根据SVN用户名名判断）则修改，否则新增
+	 * @param svnUser
+	 * @return 保存记录条数
+	 */
+	@Override
+	public int saveSvnUser(SvnUser svnUser) {
+		logger.info("SvnUserServiceImpl.saveSvnUser() start");
+		//对SVN用户密码进行加密处理
+		svnUser.setSvnPassword(EncryptUtil.encrypt(svnUser.getSvnPassword()));
+		
+		//将修改SVN用户信息写入数据库
+		int cnt = 0;
+		int res = 0;
+		//根据SVN用户名和库名查询SVN用户记录数
+		cnt = svnUserDao.countSvnUser(svnUser.getSvnUserName(), svnUser.getSvnRepoId());
+		if(cnt == 0) {
+			//cnt为0时，将svn用户信息写入数据库
+			res = svnUserDao.addSvnUser(svnUser);
+			logger.info("添加" + res + "条SVN用户信息完成");
+		} else {
+			res = svnUserDao.updateSvnUser(svnUser);
+			if(res == 0) {
+				logger.info("根据svnUserName和svnRepoName修改操作异常");
+			} else {
+				logger.info("根据svnUserName和svnRepoName修改" + res + "条SVN用户完成");
+			}
+		}
+		logger.info("SvnUserServiceImpl.saveSvnUser() end");
+		return res;
+	}
+	
+
+	/**
+	 * 根据SVN用户名查询SVN用户信息
+	 * @param svnUserName
+	 */
+	@Override
+	public List<SvnUserRepoInfo> querySvnUserBySvnUserName(Map<String, Object> params) {
+		logger.info("SvnUserServiceImpl.querySvnUserBySvnUserName() start");
+		//从数据库查询SVN用户信息
+		List<SvnUserRepoInfo> list = svnUserDao.querySvnUserBySvnUserName(params);
+		logger.info("SvnUserServiceImpl.querySvnUserBySvnUserName() end");
+		return list;
+	}
+
+	/**
+	 * 根据SVN用户名和库名查询SVN用户信息
+	 * @param svnUserName,svnRepoName
+	 */
+	@Override
+	public SvnUserRepoInfo querySvnUser(String svnUserName, String svnRepoName) {
+		logger.info("SvnUserServiceImpl.querySvnUser() start");
+		//从数据库查询SVN用户信息
+		String svnRepoIdStr = svnRepoDao.querySvnRepoIdBySvnRepoName(svnRepoName);
+		
+		long svnRepoId = 0;
+		if("".equals(svnRepoIdStr) || svnRepoIdStr == null) {
+			
+			logger.error("svn_repo数据表中不存在svn仓库名为'" + svnRepoName + "'的记录");
+			return null;
+		} else {
+			svnRepoId = Long.parseLong(svnRepoIdStr);		
+		}
+		
+		SvnUserRepoInfo svnUser = svnUserDao.querySvnUser(svnUserName, svnRepoId);
+		logger.info("SvnUserServiceImpl.querySvnUser() end");
+		return svnUser;
+	}
+
+	/**
+	 * 根据SVN用户名和库名查询SVN用户id
+	 * @param svnUserName,svnRepoName
+	 */
+	@Override
+	public String querySvnUserId(String svnUserName, String svnRepoName) {
+		logger.info("SvnUserServiceImpl.querySvnUser() start");
+		//从数据库查询SVN用户信息
+		String svnRepoIdStr = svnRepoDao.querySvnRepoIdBySvnRepoName(svnRepoName);
+		
+		long svnRepoId = 0;
+		if("".equals(svnRepoIdStr) || svnRepoIdStr == null) {
+			
+			logger.error("svn_repo数据表中不存在svn仓库名为'" + svnRepoName + "'的记录");
+			return null;
+		} else {
+			svnRepoId = Long.parseLong(svnRepoIdStr);		
+		}
+		
+		String svnUserId = svnUserDao.querySvnUserId(svnUserName, svnRepoId);
+		logger.info("SvnUserServiceImpl.querySvnUser() end");
+		return svnUserId;
+	}
+	
+	
+	/**
+	 * 根据svn用户名从svn用户表中查询用户名id
+	 * @param svnUserName
+	 */
+	@Override
+	public String querySvnUserIdBySvnUserName(String svnUserName) {
+		logger.info("SvnUserServiceImpl.querySvnUserIdBySvnUserName() start");
+		String res = null;
+		res = svnUserDao.querySvnUserIdBySvnUserName(svnUserName);
+		logger.info("SvnUserServiceImpl.querySvnUserIdBySvnUserName() end");
+		return res;
+	}
+
+	/**
+	 * 根据svnUserName(可为空)和svnRepoName(可为空)查询SVN用户记录数
+	 * @param params
+	 * @return
+	 */
+	@Override
+	public int countSvnUser(Map<String, Object> params) {
+		logger.info("SvnUserServiceImpl.countSvnUser() start");
+		int res = 0;
+		res = svnUserDao.count(params);
+		logger.info("SvnUserServiceImpl.countSvnUser() end");
+		return res;
+	}
+
+	/**
+	 * 根据svnUserName(可为空)和svnRepoName(可为空)查询SVN用户
+	 * @param params
+	 * @return
+	 */
+	@Override
+	public List<SvnUserRepoInfo> query(Map<String, Object> params) {
+		logger.info("SvnUserServiceImpl.query() start");
+		// 从数据库查询SVN用户信息
+		List<SvnUserRepoInfo> list = svnUserDao.query(params);
+		logger.info("SvnUserServiceImpl.query() end");
+		return list;
+	}
+}

@@ -1,0 +1,129 @@
+package com.bmtc.system.utils;
+
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.dom4j.Document;
+import org.dom4j.DocumentException;
+import org.dom4j.DocumentHelper;
+import org.dom4j.Element;
+
+public class GetDataByATP {
+	
+	public static Map<String, String> map = new HashMap<String, String>();
+	
+	/**
+	 * 从ATP获取数据
+	 * @param dataType
+	 * @return
+	 * @throws Exception
+	 */
+	public static String getDate(String dataType) throws Exception {
+		String urlString = "http://22.188.48.106:9090/IFWebService/DPAT.asmx";
+		String soapActionString = "http://tempuri.org/"+dataType;
+		URL url = new URL(urlString);
+		HttpURLConnection httpconn = (HttpURLConnection) url.openConnection();
+		String soap = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+				+ "<soap:Envelope xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
+				+ "xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\n"
+				+ "xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n"
+				+ "<soap:Body>\n"
+				+ "<"+dataType+" xmlns=\"http://tempuri.org/\" />\n"
+				+ "</soap:Body>\n" + "</soap:Envelope>\n";
+		byte[] buf = soap.getBytes();
+		httpconn.setRequestProperty("Content-Length",
+				String.valueOf(buf.length));
+		httpconn.setRequestProperty("Content-Type", " text/xml; charset=utf-8");
+		httpconn.setRequestProperty("soapActionString", soapActionString);
+		httpconn.setRequestMethod("POST");
+
+		httpconn.setDoOutput(true);
+		httpconn.setDoInput(true);
+		OutputStream out = httpconn.getOutputStream();
+		out.write(buf);
+		out.close();
+
+		byte[] datas = readInputStream(httpconn.getInputStream());
+		String result = new String(datas);
+		System.out.println(result);
+		return result;
+	}
+	
+	/**
+	 * 解析xml
+	 * @param result
+	 * @return
+	 * @throws DocumentException
+	 */
+	private Map<String, String> parseXml(String result)
+			throws DocumentException {
+		Document doc = DocumentHelper.parseText(result);
+		Element root = doc.getRootElement();
+		getCode(root);
+		return map;
+	}
+	
+	/**
+	 * 迭代获取对象
+	 * @param root
+	 */
+	public static void getCode(Element root) {
+		int i = 1;
+		if (root.elements() != null) {
+			@SuppressWarnings("unchecked")
+			List<Element> list = root.elements();
+			for (Element element : list) {
+				if (element.elements().size() > 0) {
+					getCode(element);
+				}
+				if (element.elements().size() == 0) {
+
+					map.put(element.getName() + i++, element.getTextTrim());
+
+				}
+			}
+		}
+	}
+	
+	/**
+	 * 读取文件
+	 * @param inputStream
+	 * @return
+	 * @throws Exception
+	 */
+	public static byte[] readInputStream(InputStream inputStream)
+			throws Exception {
+		ByteArrayOutputStream outStream = new ByteArrayOutputStream();
+		byte[] buffer = new byte[1024];
+		int len = 0;
+		while ((len = inputStream.read(buffer)) != -1) {
+			outStream.write(buffer, 0, len);
+		}
+		byte[] data = outStream.toByteArray();
+		outStream.close();
+		inputStream.close();
+		return data;
+	}
+	
+	/**
+	 * 获取数据并返回
+	 * @param dataType
+	 * @return
+	 */
+	public static Map<String, String> getProducts(String dataType) {
+		try {
+			map = new GetDataByATP().parseXml(getDate(dataType));
+		} catch (DocumentException e) {
+			e.printStackTrace();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return map;
+	}
+}

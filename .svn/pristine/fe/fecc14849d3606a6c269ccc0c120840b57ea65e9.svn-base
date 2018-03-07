@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.bmtc.svn.dao.SvnCreateBranchDao">
+	<resultMap id="BaseResultMap" type="com.bmtc.svn.domain.SvnCreateBranch" >
+		<id column="id" property="id" />
+		<result column="dept_id" property="deptId" />
+		<result column="dept_name" property="deptName" />
+		<result column="batch_id" property="batchId" />
+		<result column="batch_name" property="batchName" />
+		<result column="svn_repo_id" property="svnRepoId" />
+		<result column="svn_repo_name" property="svnRepoName" />
+		<result column="svn_repo_path" property="svnRepoPath" />
+		<result column="svn_repo_url" property="svnRepoUrl" />
+		<result column="svn_repo_des" property="svnRepoDes" />
+		<result column="svn_trunk" property="svnTrunk" />
+		<result column="new_branch" property="newBranch" />
+		<result column="create_branch_comment" property="createBranchComment" />
+		<result column="create_date" property="createDate" />
+		<result column="modify_date" property="modifyDate" />
+	</resultMap>
+
+	<resultMap id="SvnCreateBranchInfoResultMap" type="com.bmtc.svn.domain.SvnCreateBranchInfo" >
+		<id column="id" property="id" />
+		<result column="dept_id" property="deptId" />
+		<result column="dept_name" property="deptName" />
+		<result column="batch_id" property="batchId" />
+		<result column="batch_name" property="batchName" />
+		<result column="svn_repo_id" property="svnRepoId" />
+		<result column="svn_repo_name" property="svnRepoName" />
+		<result column="svn_repo_path" property="svnRepoPath" />
+		<result column="svn_repo_url" property="svnRepoUrl" />
+		<result column="svn_repo_des" property="svnRepoDes" />
+		<result column="svn_trunk" property="svnTrunk" />
+		<result column="new_branch" property="newBranch" />
+		<result column="create_branch_comment" property="createBranchComment" />
+		<result column="create_date" property="createDate" />
+		<result column="modify_date" property="modifyDate" />
+	</resultMap>
+
+	<sql id="Base_Column_List" >
+    	id, dept_id, dept_name, batch_id, batch_name, svn_repo_id, svn_trunk, new_branch, 
+    	create_branch_comment, create_date, modify_date
+    </sql>
+
+	<select id="get" resultType="com.bmtc.svn.domain.SvnCreateBranchInfo">
+		select
+		<include refid="Base_Column_List" /> 
+		from
+			svn_create_branch
+		where
+			 id = #{id}
+	</select>
+	
+	<select id="getSvnCreateBranchInfo" resultType="com.bmtc.svn.domain.SvnCreateBranchInfo" parameterType="java.lang.String">
+		select
+		a.id, a.dept_id, a.dept_name, a.batch_id, a.batch_name, a.svn_repo_id, a.svn_trunk, a.new_branch, 
+		a.create_branch_comment, a.create_date, a.modify_date,
+    	b.svn_repo_name, b.svn_repo_path, b.svn_repo_url, b.svn_repo_des
+		from 
+			svn_create_branch a join svn_repo b on (a.svn_repo_id = b.svn_repo_id)
+		where b.svn_repo_name = #{svnRepoName}
+	</select>
+	
+	<select id="querySvnCreateBranchInfo" resultType="com.bmtc.svn.domain.SvnCreateBranchInfo" 
+		parameterType="com.bmtc.svn.domain.SvnCreateBranch">
+		select
+		<include refid="Base_Column_List" />
+		from 
+			svn_create_branch
+		where
+			 svn_repo_id = #{svnRepoId}
+			 and svn_trunk = #{svnTrunk}
+			 and new_branch = #{newBranch}
+	</select>
+	
+	<select id="list" resultMap="SvnCreateBranchInfoResultMap">
+		select
+		a.id, a.dept_id, a.dept_name, a.batch_id, a.batch_name, a.svn_repo_id, a.svn_trunk, a.new_branch, 
+		a.create_branch_comment, a.create_date, a.modify_date,
+    	b.svn_repo_name, b.svn_repo_path, b.svn_repo_url, b.svn_repo_des
+		from 
+			svn_create_branch a join svn_repo b on (a.svn_repo_id = b.svn_repo_id)
+		<where>
+			<if test="id != null">
+			 	and a.id = #{id} </if>
+			<if test="deptId != null"> 
+				and a.dept_id = #{deptId} </if>
+			<if test="deptName != null and deptName != ''"> 
+				and a.dept_name = #{deptName} </if>
+			<if test="batchId != null"> 
+				and a.batch_id = #{batchId} </if>
+			<if test="batchName != null and batchName != ''"> 
+				and a.batch_name = #{batchName} </if>
+			<if test="svnRepoId != null">
+			 	and a.svn_repo_id = #{svnRepoId} </if>
+			<if test="svnTrunk != null and svnTrunk != ''">
+			 	and a.svn_trunk = #{svnTrunk} </if>
+			<if test="newBranch != null and newBranch != ''">
+			 	and a.new_branch = #{newBranch} </if>
+			<if test="createBranchComment != null and createBranchComment != ''">
+			 	and a.create_branch_comment = #{createBranchComment} </if>
+			<if test="svnRepoName != null and svnRepoName != ''">
+			 	and b.svn_repo_name = #{svnRepoName} </if>
+		</where>
+		<choose>
+			<when test="sort != null and sort.trim() != ''">
+				order by ${sort} ${order}
+			</when>
+			<otherwise>
+				order by a.id
+			</otherwise>
+		</choose>
+		<if test="offset != null and limit != null">
+			limit #{offset}, #{limit}
+		</if>
+	</select>
+
+	<select id="count" resultType="int">
+		select count(*) from 
+			svn_create_branch a join svn_repo b on (a.svn_repo_id = b.svn_repo_id)
+		<where>
+			<if test="id != null">
+			 	and a.id = #{id} </if>
+			<if test="deptId != null"> 
+				and a.dept_id = #{deptId} </if>
+			<if test="deptName != null and deptName != ''"> 
+				and a.dept_name = #{deptName} </if>
+			<if test="batchId != null"> 
+				and a.batch_id = #{batchId} </if>
+			<if test="batchName != null and batchName != ''"> 
+				and a.batch_name = #{batchName} </if>
+			<if test="svnRepoId != null">
+			 	and a.svn_repo_id = #{svnRepoId} </if>
+			<if test="svnTrunk != null and svnTrunk != ''">
+			 	and a.svn_trunk = #{svnTrunk} </if>
+			<if test="newBranch != null and newBranch != ''">
+			 	and a.new_branch = #{newBranch} </if>
+			<if test="createBranchComment != null and createBranchComment != ''">
+			 	and a.create_branch_comment = #{createBranchComment} </if>
+			<if test="svnRepoName != null and svnRepoName != ''">
+			 	and b.svn_repo_name = #{svnRepoName} </if>
+		</where>
+	</select>
+
+	<insert id="save" parameterType="com.bmtc.svn.domain.SvnCreateBranch">
+		insert into svn_create_branch
+		(
+		dept_id,
+		dept_name,
+		batch_id,
+		batch_name,
+		svn_repo_id,
+		svn_trunk,
+		new_branch,
+		create_branch_comment,
+		create_date,
+		modify_date
+		)
+		values
+		(
+		#{deptId},
+		#{deptName},
+		#{batchId},
+		#{batchName},
+		#{svnRepoId},
+		#{svnTrunk},
+		#{newBranch},
+		#{createBranchComment},
+		#{createDate},
+		#{modifyDate}
+		)
+	</insert>
+
+	<update id="update" parameterType="com.bmtc.svn.domain.SvnCreateBranch">
+		update svn_create_branch
+		<set>
+			<if test="deptId != null">
+				dept_id = #{deptId}, 
+			</if>
+			<if test="deptName != null and deptName != ''">
+				dept_name = #{deptName}, 
+			</if>
+			<if test="batchId != null">
+				batch_id = #{batchId}, 
+			</if>
+			<if test="batchName != null and batchName != ''">
+				batch_name = #{batchName}, 
+			</if>
+			<if test="svnRepoId != null">
+			 	svn_repo_id = #{svnRepoId},
+			</if>
+			<if test="svnTrunk != null and svnTrunk != ''">
+			 	svn_trunk = #{svnTrunk}, 
+			</if>
+			<if test="newBranch != null and newBranch != ''">
+			 	new_branch = #{newBranch}, 
+			</if>
+			<if test="createBranchComment != null and createBranchComment != ''">
+			 	create_branch_comment = #{createBranchComment},
+			</if>
+			<if test="modifyDate != null">
+				modify_date = #{modifyDate} 
+			</if>
+		</set>
+		where id = #{id} 
+	</update>
+
+	<delete id="remove">
+		delete from svn_create_branch where id = #{id}
+	</delete>
+
+	<delete id="batchRemove">
+		delete from svn_create_branch where id in
+		<foreach item="id" collection="array" open="(" separator="," close=")">
+			#{id}
+		</foreach>
+	</delete>
+	
+</mapper>

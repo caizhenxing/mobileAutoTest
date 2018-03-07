@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+<head th:include="include :: header"></head>
+<body class="gray-bg">
+	<div class="wrapper wrapper-content animated fadeInRight">
+		<div class="row">
+			<div class="col-sm-12">
+				<div class="ibox-content">
+					<form class="form-horizontal m-t" id="svnUserRightAddForm">
+						<div class="form-group">
+							<label class="col-sm-3 control-label">SVN仓库名：</label>
+							<div class="col-sm-8">
+								<input id="svnRepoName" name="svnRepoName" th:value="${svnInfo.svnRepoName}"
+									class="form-control" type="text" readonly="readonly" >
+							</div>
+						</div>
+						<div class="form-group">
+							<label class="col-sm-3 control-label">SVN仓库URL：</label>
+							<div class="col-sm-8">
+								<input id="svnRepoUrl" name="svnRepoUrl" th:value="${svnInfo.svnRepoUrl}"
+									class="form-control" type="text" readonly="readonly" >
+							</div>
+						</div>
+						<div class="form-group">
+							<label class="col-sm-3 control-label">SVN用户名：</label>
+							<div class="col-sm-8">
+								<input id="svnUserName" name="svnUserName" class="form-control"
+									type="text" th:value="${svnInfo.svnUserName}" readonly="readonly">
+							</div>
+						</div>
+						
+<!--  					   <div class="form-group">
+							<label class="col-sm-3 control-label">SVN路径：</label>
+							<div class="col-sm-8">
+								<input id="svnPath" name="svnPath" class="form-control"
+									type="text">
+							</div>
+						</div> -->
+						
+						<!-- SvnRepoName TODO -->
+ 						<div class="form-group">
+							<label class="col-sm-3 control-label">SVN路径：</label>
+							<div class="col-sm-8">
+								<input id="svnPath" name="svnPath"
+									class="form-control" type="text" style="cursor: pointer;"
+									onclick="openSvnPath()" readonly="readonly" placeholder="点击选择需要开通权限的SVN路径">
+							</div>
+						</div>
+						
+						<div class="form-group">
+							<label class="col-sm-3 control-label">SVN权限:</label>
+							<div class="col-sm-8">
+								<label class="radio-inline"> <input type="radio"
+									name="svnUserAuthz" value="r" /> 仅可读
+								</label> <label class="radio-inline"> <input type="radio"
+									name="svnUserAuthz" value="rw" /> 可读可写
+								</label>
+							</div>
+						</div>
+						<div class="form-group">
+							<div class="col-sm-8 col-sm-offset-3">
+								<button type="submit" class="btn btn-primary" id="submit">提交</button>
+							</div>
+						</div>
+						<div class="col-sm-8 col-sm-offset-3" id="showLoading"></div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div th:include="include::footer"></div>
+	<script type="text/javascript" src="/js/appjs/svn/svnUserRight/add.js">
+	</script>
+</body>
+</html>

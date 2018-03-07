@@ -1,0 +1,196 @@
+package com.bmtc.task.service.impl;
+
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
+import com.bmtc.common.config.BMTCConfig;
+import com.bmtc.common.utils.Query;
+import com.bmtc.device.domain.Device;
+import com.bmtc.device.utils.HttpRequestUtils;
+import com.bmtc.task.dao.ExecutePlanDao;
+import com.bmtc.task.dao.TaskScriptDao;
+import com.bmtc.task.domain.ExecuteDetail;
+import com.bmtc.task.domain.ExecutePlan;
+import com.bmtc.task.domain.ProductSvn;
+import com.bmtc.task.service.ExecutePlanService;
+import com.google.common.reflect.TypeToken;
+import com.google.gson.Gson;
+
+/**
+ * 测试任务执行计划的service接口实现类
+ * @author Administrator
+ *
+ */
+@Service
+@Transactional
+public class ExecutePlanServiceImpl implements ExecutePlanService{
+
+	@Autowired
+	ExecutePlanDao executePlanMapper;
+	@Autowired
+	BMTCConfig bmtcConfig;
+	@Autowired
+	TaskScriptDao taskScriptMapper;
+	
+	/**
+	 * 查询执行计划列表数据
+	 * @param query
+	 * @return List<ExecutePlan>
+	 */
+	@Override
+	public List<ExecutePlan> list(Query query) {
+		List<ExecutePlan> executePlans = executePlanMapper.list(query);
+		return executePlans;
+	}
+	/**
+	 * 查询执行计划总记录数
+	 * @param query
+	 * @return int
+	 */
+	@Override
+	public int count(Query query) {
+		int count = executePlanMapper.count(query);
+		return count;
+	}
+	/**
+	 * 通过id查询执行计划
+	 * @param id
+	 * @return ExecutePlan
+	 */
+	@Override
+	public ExecutePlan get(Long id) {
+		ExecutePlan executePlan = executePlanMapper.get(id);
+		return executePlan;
+	}
+	/**
+	 * 保存执行计划
+	 * @param ExecutePlan executePlan
+	 * @return int
+	 */
+	@Override
+	public int save(ExecutePlan executePlan) {
+		int save = executePlanMapper.save(executePlan);
+		return save;
+	}
+	/**
+	 * 执行计划修改
+	 * @param ExecutePlan executePlan
+	 * @return R
+	 */
+	@Override
+	public int update(ExecutePlan executePlan) {
+		if("0".equals(executePlan.getTriggerMode())){
+			executePlan.setCondition("");
+		}
+		int update = executePlanMapper.update(executePlan);
+		return update;
+	}
+	/**
+	 * 执行计划执行测试任务
+	 * @param Long id
+	 * @return void
+	 */
+	@Override
+	public void active(Long id) {
+		// 通过id查询执行计划
+//		ExecutePlan executePlan = executePlanMapper.get(id);
+		// 获取设备信息:"http://22.11.27.29/bmtc/android/info"
+		JSONObject httpget = HttpRequestUtils.httpget(bmtcConfig.getDeviceInfoAdd());
+		// TODO 测试打印 样例:{"msg":"操作成功","code":"0000","data":[{"name":"KIW-AL10","verison":"5.1.1","udid":"QMS4C16130000172","resolution":"1080x1920","status":"0"}]}
+		System.out.println(httpget);
+		// 创建gson对象
+		Gson gson = new Gson();
+		// 将获得的JSON格式的设备信息封装到JSONObject对象
+		JSONObject object = new JSONObject(httpget);
+		// 获取其中的data信息
+		String data = object.getString("data");
+		// 将data使用gson转化为Device对象
+		@SuppressWarnings("serial")
+		List<Device> devices = gson.fromJson(data, new TypeToken<List<Device>>(){}.getType());
+		// 判断devices是否为空
+		if(devices == null){
+			// TODO 获取的设备信息为空，即未检测到可执行设备
+			
+		}
+		// 如果不为空，遍历设备信息
+		for (Device device : devices) {
+			// 判断设备状态，是否繁忙
+			if(device.getStatus() == "1"){// 繁忙
+				continue;
+			}
+			// 获取设备的udid
+			String udid = device.getUdid();
+			// 回去设备的版本号
+			String verison = device.getVerison();
+			
+			
+			
+			// 创建ExecuteDetail对象
+			ExecuteDetail executeDetail = new ExecuteDetail();
+			// token
+			executeDetail.setToken(UUID.randomUUID().toString());
+			// 测试套路径
+			executeDetail.setTestSuitePath("svn://22.11.31.36/automation_test/branches/706batch/BOC/Android/手机银行登录.txt");
+			// taskId
+			executeDetail.setTaskId(25l);
+			//executeDetail.setDeviceType();
+			// 设备版本
+			executeDetail.setVersion(verison);
+			// 设备的udid
+			executeDetail.setUdid(udid);
+			// 执行明细id
+			// executeDetail.setExecutePlanId(executePlan.getId());
+			// 创建ProductSvn
+			ProductSvn productSvn = new ProductSvn();
+			productSvn.setProductName("bocMobile");
+			productSvn.setUsername("wy_maxl");
+			productSvn.setPassword("123456");
+			productSvn.setRepository("svn://22.11.31.36/automation_test/branches");
+			executeDetail.setProductSvn(productSvn);
+			// 此值原为token,现有所更改，后维护
+			HttpRequestUtils.httpPost(bmtcConfig.getExecuteAdd(), (JSONObject) JSON.toJSON(executeDetail), false);
+			
+			
+			
+			// 获取执行计划的测试任务id
+//			Long taskId = executePlan.getTaskId();
+			// 获取该测试任务关联的脚本信息
+//			List<Script> scripts = taskScriptMapper.getScript(taskId);
+			// 遍历关联脚本对象
+			/*for (Script script : scripts) {
+				// 获取此脚本被选中的caseName信息
+				List<TaskScriptDO> taskScript = taskScriptMapper.getTaskScript(script.getScriptId(),taskId);
+				// 如果无关联信息，继续遍历下一个测试套
+				if(taskScript == null){
+					continue;
+				}
+				// 如果此条测试套无caseName被选中，继续循环
+				if(taskScript.get(0).getCheckedCaseName() != null && !"".equals(taskScript.get(0).getCheckedCaseName())){
+					// 创建ExecuteDetail对象
+					ExecuteDetail executeDetail = new ExecuteDetail();
+					// 测试套路径
+					executeDetail.setTestSuitePath(script.getTestSuitPath());
+					// taskId
+					executeDetail.setTaskId(taskId);
+					//executeDetail.setDeviceType();
+					// 设备版本
+					executeDetail.setVersion(verison);
+					// 设备的udid
+					executeDetail.setUdid(udid);
+					// 执行明细id
+					// executeDetail.setExecutePlanId(executePlan.getId());
+					// 此值原为token,现有所更改，后维护
+					HttpRequestUtils.httpPost(bmtcConfig.getExecuteAdd(), (JSONObject) JSON.toJSON(executeDetail), false);
+				}
+			}*/
+		}
+		
+	}
+	
+}

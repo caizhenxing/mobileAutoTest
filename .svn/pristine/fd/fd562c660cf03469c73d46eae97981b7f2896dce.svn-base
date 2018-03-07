@@ -1,0 +1,90 @@
+package com.bmtc.svn.service;
+
+import java.util.List;
+import java.util.Map;
+
+import com.bmtc.svn.domain.SvnUser;
+import com.bmtc.svn.domain.SvnUserRepoInfo;
+
+/**
+ * SvnUserService业务逻辑接口
+ * @author lpf7161
+ *
+ */
+public interface SvnUserService {
+	
+	/**
+	 * 增加SVN用户
+	 * @param svnUser
+	 */
+	int addSvnUser(SvnUser svnUser);
+	
+	/**
+	 * 根据SVN用户名和库名删除SVN用户
+	 * @param svnUserName,svnRepoName
+	 */
+	int deleteSvnUser(String svnUserName, String svnRepoName);
+	
+	/**
+	 * 根据SVN用户名查询SVN用户记录数
+	 * @param svnUserName
+	 */
+	int countSvnUserBySvnUserName(Map<String, Object> params);
+	
+	/**
+	 * 根据SVN用户名删除SVN用户，即删除所有svn仓库中用户名为svnUserName的用户信息
+	 * @param svnUserName
+	 */
+	int deleteSvnUserBySvnUserName(String svnUserName);
+	
+	/**
+	 * 根据SVN用户名和库名修改SVN用户
+	 * @param svnUser
+	 */
+	int updateSvnUser(SvnUser svnUser);
+	
+	/**
+	 * 保存SVN用户，若存在此svn用户（根据SVN用户名名判断）则修改，否则新增
+	 * @param svnUser
+	 * @return 保存记录条数
+	 */
+	int saveSvnUser(SvnUser svnUser);
+	
+	/**
+	 * 根据SVN用户名查询SVN用户信息
+	 * @param svnUserName
+	 */
+	List<SvnUserRepoInfo> querySvnUserBySvnUserName(Map<String, Object> params);
+	
+	/**
+	 * 根据SVN用户名和库名查询SVN用户信息
+	 * @param svnUserName,svnRepoName
+	 */
+	SvnUserRepoInfo querySvnUser(String svnUserName, String svnRepoName);
+	
+	/**
+	 * 根据SVN用户名和库名查询SVN用户id
+	 * @param svnUserName,svnRepoName
+	 */
+	String querySvnUserId(String svnUserName, String svnRepoName);
+	
+	/**
+	 * 根据svn用户名从svn用户表中查询用户名id
+	 * @param svnUserName
+	 */
+	String querySvnUserIdBySvnUserName(String svnUserName);
+	
+	/**
+	 * 根据svnUserName(可为空)和svnRepoName(可为空)查询SVN用户记录数
+	 * @param params
+	 * @return
+	 */
+	int countSvnUser(Map<String, Object> params);
+	
+	/**
+	 * 根据svnUserName(可为空)和svnRepoName(可为空)查询SVN用户
+	 * @param params
+	 * @return
+	 */
+	List<SvnUserRepoInfo> query(Map<String, Object> params);
+}

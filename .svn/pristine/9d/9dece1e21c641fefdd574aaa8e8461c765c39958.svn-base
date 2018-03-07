@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+<head th:include="include :: header"></head>
+<body class="gray-bg">
+	<div class="wrapper wrapper-content ">
+		<div class="row">
+			<div class="col-sm-12">
+				<div class="ibox float-e-margins">
+					<div class="ibox-content">
+						<form class="form-horizontal m-t" id="signupForm">
+						<div id="part1">
+							<!-- 执行计划ID，隐藏域 -->
+							<input id="id" name="id" type="hidden" th:value="${executePlan.id}">
+							<!-- 关联测试任务的脚本的caseName，隐藏域 -->
+							<input id="testSuiteCaseNames" name="testSuiteCaseNames" type="hidden">
+							<!-- 选择测试任务 -->
+							<div class="form-group">
+								<label class="col-sm-3 control-label">测试任务:</label>
+								<div class="col-sm-4">
+									<input id="taskId" name="taskId" class="hidden" th:value="${executePlan.taskId}"> 
+									<input
+										id="taskName" name="taskName" class="form-control" type="text"
+										style="cursor: pointer;" onclick="showTaskList()" th:value="${executePlan.taskName}"
+										readonly="readonly" placeholder="选择测试任务">
+								</div>
+							</div>
+							<!-- 执行计划的设备类型:1，Android；2，IOS -->
+							<div class="form-group">
+								<label class="col-sm-3 control-label">设备类型:</label>
+								<div class="col-sm-4">
+									<label class="radio-inline"> 
+										<input type="radio"	name="deviceType" value="0"  th:field="*{executePlan.deviceType}"/>Android
+									</label> 
+									<label class="radio-inline">
+										<input type="radio"	name="deviceType" value="1"  th:field="*{executePlan.deviceType}"/>IOS
+									</label>
+								</div>
+							</div>
+							<!-- 执行计划的状态:1,执行中;0,空闲 -->
+							<div class="form-group">
+								<label class="col-sm-3 control-label">状态:</label>
+								<div class="col-sm-4">
+									<label class="radio-inline"> 
+									<input type="radio" th:field="*{executePlan.status}"
+										name="status" value="0" checked="checked"/> 空闲
+									</label> <label class="radio-inline"> 
+									<input type="radio" th:field="*{executePlan.status}"
+										name="status" value="1"/> 执行中
+									</label>
+								</div>
+							</div>
+							<!-- 执行计划的触发方式:1,定时触发;0,立即触发 -->
+							<div class="form-group">
+								<label class="col-sm-3 control-label">触发方式:</label>
+								<div class="col-sm-4">
+									<label class="radio-inline">
+									<input type="radio" th:field="*{executePlan.triggerMode}"
+										name="triggerMode" value="1" onclick="showTrigger()"/> 定时触发
+									</label> <label class="radio-inline"> 
+									<input type="radio" th:field="*{executePlan.triggerMode}"
+										name="triggerMode" value="0" onclick="hidTrigger()"/> 立即触发
+									</label>
+								</div>
+							</div>
+							<!-- 触发方式 -->
+							<div id="trigger" class="form-group">
+								<label class="col-sm-3 control-label">触发条件:</label>
+								<div class="col-sm-4">
+									<input id="condition" name="condition" class="form-control" type="text" th:value="${executePlan.condition}">
+								</div>
+							</div>
+							<!-- 下一步按钮 -->
+								<div class="form-group">
+									<div class="col-sm-8 col-sm-offset-3">
+										<button type="button" class="btn btn-primary"
+											onclick="toStep12()">下一步</button>
+									</div>
+								</div>
+							</div>
+							<div id="part2">
+								<!-- 上一步和提交按钮 -->
+								<div class="form-group">
+									<div class="col-sm-4 col-sm-offset-3" style="padding-left: 300px">
+										<button type="button" class="btn btn-primary"
+											onclick="toStep21()" style="margin-right: 50px">上一步</button>
+										<button type="submit" class="btn btn-primary">提交</button>
+									</div>
+								</div>
+								<!-- 关联脚本  -->
+								<div class="row">
+									<div class="col-sm-8" style="margin-left: 280px">
+										<div class="ibox">
+											<div class="ibox-body">
+												<div class="ibox-title">
+													<h5>选择脚本:</h5>
+												</div>
+												<div class="ibox-content">
+													<div id="jstree"></div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</form>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div th:include="include::footer"></div>
+	<script type="text/javascript" src="/js/appjs/executePlan/edit.js">
+	</script>
+</body>
+</html>

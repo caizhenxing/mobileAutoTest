@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- namespace命名空间作用是对sql进行分类化的管理，理解为sql隔离，namespace等于mapper接口地址 -->
+
+<mapper namespace="com.bmtc.svn.dao.SvnRepoDao">
+	<resultMap id="BaseResultMap" type="com.bmtc.svn.domain.SvnRepo" >
+		<id column="svn_repo_id" property="id" />
+		<result column="svn_repo_name" property="svnRepoName" />
+		<result column="svn_repo_path" property="svnRepoPath" />
+		<result column="svn_repo_url" property="svnRepoUrl" />
+		<result column="svn_repo_des" property="svnRepoDes" />
+	</resultMap>
+
+	<sql id="Base_Column_List" >
+    	svn_repo_id, svn_repo_name, svn_repo_path, svn_repo_url, svn_repo_des
+    </sql>
+
+	<!-- 增加SVN仓库 -->
+	<insert id="addSvnRepo" parameterType="com.bmtc.svn.domain.SvnRepo">
+		insert into svn_repo(
+		svn_repo_name,
+		svn_repo_path,
+		svn_repo_url,
+		svn_repo_des)
+		values
+		(#{svnRepoName},
+		#{svnRepoPath},
+		#{svnRepoUrl},
+		#{svnRepoDes})
+	</insert>
+	
+	<!-- 根据SVN库名查询是否存在该SVN仓库 -->
+	<select id="isExistSvnRepo" resultType="java.lang.Integer" >
+		select count(*) from svn_repo
+		where svn_repo_name = #{svnRepoName}
+	</select>
+	
+	<!-- 查询svn仓库记录数-->
+	<select id="countSvnRepo" resultType="java.lang.Integer" >
+		select count(*) from svn_repo
+		<where>
+		    <if test="svnRepoName != null and svnRepoName != ''">
+				and svn_repo_name like concat('%', #{svnRepoName}, '%')
+			</if>
+		</where>
+	</select>
+	
+	<!-- 根据svn路径和svn url查询svn仓库记录数 -->
+	<select id="getCount" resultType="java.lang.Integer" >
+		select count(1) from svn_repo
+		where svn_repo_path = #{svnRepoPath} or svn_repo_url = #{svnRepoUrl}
+	</select>
+	
+	<!-- 根据SVN库名删除SVN仓库 -->
+	<delete id="deleteSvnRepo" >
+	    delete from svn_repo
+	    where svn_repo_name = #{svnRepoName}
+	</delete>
+	
+	<!-- 根据svn库id批量删除记录 -->
+	<delete id="batchRemoveSvnRepo">
+		delete from svn_repo where svn_repo_id in 
+		<foreach item="svnRepoId" collection="array" open="(" separator="," close=")">
+			#{svnRepoId}
+		</foreach>
+	</delete>
+	
+	<!-- 根据SVN库名修改SVN仓库 -->
+	<update id="updateSvnRepo" parameterType="com.bmtc.svn.domain.SvnRepo" >
+	    update svn_repo
+		<set>
+			<if test="svnRepoName != null and svnRepoName != ''">
+				svn_repo_name = #{svnRepoName},
+			</if>
+			<if test="svnRepoPath != null and svnRepoPath != ''">
+				svn_repo_path = #{svnRepoPath},
+			</if>
+			<if test="svnRepoUrl != null and svnRepoUrl != ''">
+				svn_repo_url = #{svnRepoUrl},
+			</if>
+			<if test="svnRepoDes != null and svnRepoDes != ''">
+				svn_repo_des = #{svnRepoDes}
+			</if>
+		</set>
+	    where svn_repo_name = #{svnRepoName}
+	</update>
+	
+	<!-- 查询svn仓库信息 -->
+	<select id="querySvnRepo" resultMap="BaseResultMap" >
+	    select 
+	    <include refid="Base_Column_List" />
+	    from svn_repo
+	    <where>
+		    <if test="svnRepoName != null and svnRepoName != ''">
+				and svn_repo_name like concat('%', #{svnRepoName}, '%')
+			</if>
+		</where>
+		<choose>
+			<when test="sort != null and sort.trim() != ''">
+				order by ${sort} ${order}
+			</when>
+			<otherwise>
+				order by svn_repo_id
+			</otherwise>
+		</choose>
+	    <if test="offset != null and limit != null">
+			limit #{offset}, #{limit}
+		</if>
+	</select>
+	
+	<!-- 根据svn仓库名从svn仓库表中查询仓库信息 -->
+	<select id="querySvnRepoBySvnRepoName" resultMap="BaseResultMap" parameterType="java.lang.String" >
+	    select 
+	    <include refid="Base_Column_List" />
+	    from svn_repo
+	    where svn_repo_name = #{svnRepoName}
+	</select>
+  
+  	<!-- 根据svn仓库id从svn仓库表中查询仓库信息 -->
+	<select id="querySvnRepoBySvnRepoId" resultMap="BaseResultMap" parameterType="java.lang.Long" >
+	    select 
+	    <include refid="Base_Column_List" />
+	    from svn_repo
+	    where svn_repo_id = #{svnRepoId}
+	</select>
+  
+  	<!-- 根据svn仓库名从svn仓库表中查询仓库id -->
+	<select id="querySvnRepoIdBySvnRepoName" resultType="java.lang.String" parameterType="java.lang.String" >
+	    select svn_repo_id
+	    from svn_repo
+	    where svn_repo_name = #{svnRepoName}
+	</select>
+	
+</mapper>

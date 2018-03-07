@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh_CN" xmlns:th="http://www.thymeleaf.org"
+	xmlns:shiro="http://www.pollix.at/thymeleaf/shiro">
+<meta charset="utf-8">
+<head th:include="include :: header"></head>
+<body class="gray-bg">
+	<div class="wrapper wrapper-content ">
+		<div class="row" style="margin-right:15px;margin-left:15px">
+				<div class="ibox">
+					<div class="ibox-body">
+						<div class="fixed-table-toolbar">
+							<div class="columns pull-left">
+								<button shiro:hasPermission="test:script:list" type="button" id="scriptList"
+									class="btn  btn-primary">
+									<i class="fa fa-plus hidden" aria-hidden="true"></i>列表
+								</button>
+								<button type="button"
+									class="btn  btn-primary" onclick="updateScripts()">
+									<i class="fa fa-plus hidden" aria-hidden="true"></i>同步
+								</button>
+								<!-- <button shiro:hasPermission="script:script:batchRemove" type="button"
+									class="btn  btn-danger" onclick="batchRemove()">
+									<i class="fa fa-trash hidden" aria-hidden="true"></i>删除
+								</button> -->
+							</div>
+							<div class="columns pull-right">
+								<button class="btn btn-success" onclick="reLoad()">查询</button>
+							</div>
+
+							<div class="columns pull-right col-md-2 nopadding">
+								<input id="searchName" type="text" class="form-control"
+									placeholder="脚本名称">
+							</div>
+						</div>
+						<table id="scriptTable" data-mobile-responsive="true">
+						</table>
+					</div>
+				</div>
+		</div>
+		<!--shiro控制bootstraptable行内按钮看见性-->
+		<!-- <div>
+			<script type="text/javascript">
+				var s_edit_h = 'hidden';
+			</script>
+		</div>
+		<div shiro:hasPermission="test:script:edit">
+			<script type="text/javascript">
+				s_edit_h = '';
+			</script>
+		</div> -->
+	</div>
+	<div th:include="include :: footer"></div>
+	<script type="text/javascript" src="/js/appjs/script/script.js"></script>
+</body>
+</html>

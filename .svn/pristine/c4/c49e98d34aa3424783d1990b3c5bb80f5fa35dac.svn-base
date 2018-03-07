@@ -1,0 +1,63 @@
+package com.bmtc.device.controller;
+
+import java.util.List;
+
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.bmtc.device.domain.Device;
+import com.bmtc.device.domain.Response;
+import com.bmtc.device.service.DevicesService;
+
+
+
+@RequestMapping("/bmtc")
+@Controller
+public class DeviceManagerController {
+	
+	@Autowired
+	
+	private DevicesService devicesService;
+	
+	@RequestMapping(value="/all/android/info", method=RequestMethod.GET)
+	@ResponseBody
+	public Response<List<Device>> getAndroidInfo(){
+		
+		Response<List<Device>> deviceVo = new Response<List<Device>>();
+		List<Device> deviceInfo = devicesService.getAllAndroidInfo();
+		
+		if (deviceInfo.size() > 0) {
+			deviceVo.setCode("0000");
+			deviceVo.setData(deviceInfo);
+			deviceVo.setMsg("操作成功");
+		}else { 
+			deviceVo.setCode("9997");
+			deviceVo.setData(null);
+			deviceVo.setMsg("未检测到设备");
+		}
+		return deviceVo;
+	}
+	
+	@RequestMapping(value="/all/IOS/info", method=RequestMethod.GET)
+	@ResponseBody
+	public Response<List<Device>> getIOSInfo(){
+		
+		Response<List<Device>> deviceVo = new Response<List<Device>>();
+		List<Device> deviceInfo = devicesService.getAllIOSInfo();
+		
+		if (deviceInfo.size() > 0) {
+			deviceVo.setCode("0000");
+			deviceVo.setData(deviceInfo);
+			deviceVo.setMsg("操作成功");
+		}else {
+			deviceVo.setCode("9997");
+			deviceVo.setData(null);
+			deviceVo.setMsg("未检测到设备");
+		}
+		return deviceVo;
+	}
+}

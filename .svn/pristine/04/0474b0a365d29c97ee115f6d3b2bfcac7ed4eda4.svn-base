@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- namespace命名空间作用是对sql进行分类化的管理，理解为sql隔离，namespace等于mapper接口地址 -->
+
+<mapper namespace="com.bmtc.svn.dao.SvnUserDao">
+	<resultMap id="BaseResultMap" type="com.bmtc.svn.domain.SvnUser" >
+		<id column="svn_user_id" property="id" />
+		<result column="svn_user_name" property="svnUserName" />
+		<result column="svn_password" property="svnPassword" />
+		<result column="svn_repo_id" property="svnRepoId" />
+		<result column="user_status" property="status" />
+		<result column="svn_user_create_date" property="svnUserCreateDate" />
+		<result column="svn_user_modify_date" property="svnUserModifyDate" />
+	</resultMap>
+
+	<resultMap id="SvnUserRepoInfoResultMap" type="com.bmtc.svn.domain.SvnUserRepoInfo" >
+		<id column="svn_repo_id" property="svnRepoId" />
+		<id column="svn_user_id" property="svnUserId" />
+		<result column="svn_repo_name" property="svnRepoName" />
+		<result column="name" property="name" />
+		<result column="svn_repo_path" property="svnRepoPath" />
+		<result column="svn_repo_url" property="svnRepoUrl" />
+		<result column="svn_repo_des" property="svnRepoDes" />
+		<result column="svn_user_name" property="svnUserName" />
+		<result column="svn_password" property="svnPassword" />
+		<result column="user_status" property="userStatus" />
+		<result column="svn_user_create_date" property="svnUserCreateDate" />
+		<result column="svn_user_modify_date" property="svnUserModifyDate" />
+	</resultMap>
+	
+	<sql id="Base_Column_List" >
+    	svn_user_id, svn_user_name, svn_repo_id, user_status, svn_user_create_date, svn_user_modify_date
+    </sql>
+
+	<!-- 添加svn用户 -->
+	<insert id="addSvnUser" parameterType="com.bmtc.svn.domain.SvnUser">
+		insert into svn_user(
+		svn_user_name,
+		svn_password,
+		svn_repo_id,
+		user_status,
+		svn_user_create_date,
+		svn_user_modify_date)
+		values
+		(#{svnUserName},
+		#{svnPassword},
+		#{svnRepoId},
+		#{status},
+		#{svnUserCreateDate},
+		#{svnUserModifyDate})
+	</insert>
+	
+	<!-- 根据SVN用户名和库名查询svn_user表中记录个数 -->
+	<select id="countSvnUser" resultType="java.lang.Integer" >
+		select count(*) from svn_user
+		where svn_user_name = #{svnUserName} and svn_repo_id = #{svnRepoId}
+	</select>
+	
+	<!-- 根据SVN用户名和库名删除SVN用户信息 -->
+	<delete id="deleteSvnUser" >
+	    delete from svn_user
+	    where svn_user_name = #{svnUserName} and svn_repo_id = #{svnRepoId}
+	</delete> 
+	
+	<!-- 根据SVN用户名查询svn_user表中记录个数 -->
+	<select id="countSvnUserBySvnUserName" resultType="java.lang.Integer" >
+		select count(*) from svn_user
+		where svn_user_name = #{svnUserName}
+	</select>
+	
+	<!-- 根据SVN用户名删除SVN用户信息 -->
+	<delete id="deleteSvnUserBySvnUserName" >
+	    delete from svn_user
+	    where svn_user_name = #{svnUserName}
+	</delete> 
+	
+	<!-- 根据SVN用户名和库名修改SVN用户信息 -->
+	<update id="updateSvnUser" parameterType="com.bmtc.svn.domain.SvnUser" >
+	    update svn_user
+		<set>
+			<if test="svnUserName != null and svnUserName != ''">
+				svn_user_name = #{svnUserName},
+			</if>
+			<if test="svnPassword != null and svnPassword != ''">
+				svn_password = #{svnPassword},
+			</if>
+			<if test="svnRepoId != null">
+				svn_repo_id = #{svnRepoId},
+			</if>
+			<if test="status != null">
+				user_status = #{status},
+			</if>
+			<if test="svnUserModifyDate != null">
+				svn_user_modify_date = #{svnUserModifyDate}
+			</if>
+		</set>
+	    where svn_user_name = #{svnUserName} and svn_repo_id = #{svnRepoId}
+	</update>
+	
+	<!-- 根据SVN用户名查询SVN用户信息 -->
+	<select id="querySvnUserBySvnUserName" resultMap="SvnUserRepoInfoResultMap" parameterType="java.lang.String" >
+	    select 
+	    a.svn_repo_id, a.svn_repo_name, a.svn_repo_path, a.svn_repo_url,
+	    a.svn_repo_des, b.svn_user_id, b.svn_user_name, b.svn_password,
+	    b.user_status, b.svn_user_create_date, b.svn_user_modify_date
+	    from svn_repo a join svn_user b on (a.svn_repo_id = b.svn_repo_id)
+	    where b.svn_user_name = #{svnUserName}
+	    <if test="offset != null and limit != null">
+			limit #{offset}, #{limit}
+		</if>
+	</select>
+	
+	<!-- 根据SVN用户名和库名查询SVN用户信息 -->
+	<select id="querySvnUser" resultMap="SvnUserRepoInfoResultMap" >
+	    select
+	    a.svn_repo_id, a.svn_repo_name, a.svn_repo_path, a.svn_repo_url,
+	    a.svn_repo_des, b.svn_user_id, b.svn_user_name, b.svn_password,
+	    b.user_status, b.svn_user_create_date, b.svn_user_modify_date
+	    from svn_repo a join svn_user b on (a.svn_repo_id = b.svn_repo_id)
+	    where b.svn_user_name = #{svnUserName} and b.svn_repo_id = #{svnRepoId}
+	</select>
+	
+	
+	<!-- 根据SVN用户名(可为空)和库名(可为空)查询SVN用户记录数 -->
+	<select id="count" resultType="java.lang.Integer" >
+		select count(*) 
+		from svn_repo a join svn_user b on (a.svn_repo_id = b.svn_repo_id) 
+	    join sys_user c on (b.svn_user_name = c.username)
+	    <where>
+		    <if test="svnRepoName != null and svnRepoName != ''">
+				and a.svn_repo_name like concat('%', #{svnRepoName}, '%')
+			</if>
+			<if test="svnUserName != null and svnUserName != ''">
+				and b.svn_user_name like concat('%', #{svnUserName}, '%')
+			</if>
+		</where>
+	</select>
+	
+	<!-- 根据SVN用户名(可为空)和库名(可为空)查询SVN用户信息 -->
+	<select id="query" resultMap="SvnUserRepoInfoResultMap" >
+	    select
+	    a.svn_repo_id, a.svn_repo_name, a.svn_repo_path, a.svn_repo_url,
+	    a.svn_repo_des, b.svn_user_id, b.svn_user_name, b.svn_password,
+	    b.user_status, b.svn_user_create_date, b.svn_user_modify_date, c.name
+	    from svn_repo a join svn_user b on (a.svn_repo_id = b.svn_repo_id) 
+	    join sys_user c on (b.svn_user_name = c.username)
+	    <where>
+		    <if test="svnRepoName != null and svnRepoName != ''">
+				and a.svn_repo_name like concat('%', #{svnRepoName}, '%')
+			</if>
+			<if test="svnUserName != null and svnUserName != ''">
+				and b.svn_user_name like concat('%', #{svnUserName}, '%')
+			</if>
+		</where>
+		<choose>
+			<when test="sort != null and sort.trim() != ''">
+				order by ${sort} ${order}
+			</when>
+			<otherwise>
+				order by a.svn_repo_id
+			</otherwise>
+		</choose>
+	    <if test="offset != null and limit != null">
+			limit #{offset}, #{limit}
+		</if>
+	</select>
+	
+	<!-- 根据SVN库名查询SVN用户信息 -->
+	<select id="getListBySvnRepoId" resultMap="BaseResultMap" >
+	    select
+	    svn_user_id, svn_user_name, svn_password,
+	    user_status, svn_user_create_date, svn_user_modify_date
+	    from svn_user
+	    where svn_repo_id = #{svnRepoId}
+	</select>
+	
+	
+	<!-- 根据SVN用户名和库名查询SVN用户id -->
+	<select id="querySvnUserId" resultType="java.lang.String" >
+	    select svn_user_id
+	    from svn_user
+	    where svn_user_name = #{svnUserName} and svn_repo_id = #{svnRepoId}
+	</select>
+
+  
+    <!-- 根据svn用户名从svn用户表中查询用户名id -->
+	<select id="querySvnUserIdBySvnUserName" resultType="java.lang.String" parameterType="java.lang.String" >
+	    select svn_user_id
+	    from svn_user
+	    where svn_user_name = #{svnUserName}
+	</select>
+  
+</mapper>

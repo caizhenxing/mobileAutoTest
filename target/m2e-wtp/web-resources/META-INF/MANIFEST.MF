@@ -1,0 +1,11 @@
+Manifest-Version: 1.0
+Implementation-Title: bocMobileTest_1
+Implementation-Version: 1.5.0
+Built-By: jasonma
+Implementation-Vendor-Id: com.bmtc
+Build-Jdk: 1.8.0_144
+Implementation-URL: http://projects.spring.io/spring-boot/bocMobileTes
+ t_1/
+Created-By: Maven Integration for Eclipse
+Implementation-Vendor: Pivotal Software, Inc.
+

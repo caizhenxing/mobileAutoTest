@@ -1,0 +1,489 @@
+package com.bmtc.device.service.impl;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.tmatesoft.svn.core.SVNException;
+
+import com.bmtc.common.exception.BDException;
+import com.bmtc.common.utils.FileUtil;
+import com.bmtc.device.domain.Appium;
+import com.bmtc.device.domain.Robot;
+import com.bmtc.device.domain.TestCase;
+import com.bmtc.device.service.AppiumService;
+import com.bmtc.device.service.ExecuteDetailService;
+import com.bmtc.device.service.TestCaseService;
+import com.bmtc.device.utils.PropertiesUtils;
+import com.bmtc.device.utils.RobotUtils;
+import com.bmtc.device.utils.StreamWatch;
+import com.bmtc.svn.service.UpdateLocalCodeBySvnRepoService;
+import com.bmtc.task.domain.ExecuteDetail;
+import com.bmtc.task.domain.ProductSvn;
+
+/**
+ * @author: Jason.ma
+ * @date: 2018年1月3日下午4:59:44
+ *
+ */
+@Service
+public class TestCaseServiceImpl implements TestCaseService {
+	private static final Logger logger = LoggerFactory.getLogger(TestCaseServiceImpl.class);
+	
+	@Autowired
+	private AppiumService appiumService;
+	@Autowired
+	private ExecuteDetailService executeDetailService;
+	@Autowired
+	private UpdateLocalCodeBySvnRepoService updateLocalCodeBySvnRepoService;
+
+	@Override
+	public boolean runTestSuiteForAndroid(ExecuteDetail executeDetail) {
+		boolean flag = false;
+		
+		ProductSvn productSvn = executeDetail.getProductSvn();
+		String workspace = createLocalScriptPath(productSvn.getProductName());
+		long svnVersion = checkOutScript(productSvn, workspace);
+		logger.debug("脚本更新成功svn仓库 {}中脚本版本为{}", productSvn.getRepository(), svnVersion);
+		//组装测试命令
+		final String token = executeDetail.getToken();
+		String testLog = createLog(executeDetail.getUdid(), productSvn.getProductName());
+		String rfLog = testLog + "/log.html";
+		String appiumLog = testLog + "/appium.txt";
+		String testReport = testLog + "/report.html";
+		
+		executeDetail.setDeviceType("Android");
+		executeDetail.setTestReportPath(testReport);
+		executeDetail.setRfLogPath(rfLog);
+		executeDetail.setAppiumLogPath(appiumLog);
+		executeDetail.setStatus("1");
+		executeDetailService.save(executeDetail);
+		
+		//启动appium服务
+		final Appium appium = appiumService.startAppium(testLog);
+		//rf启动初始化
+		Robot robot = new Robot();
+		robot.setLog(testLog);
+		robot.setUrl(appium.getHost(), appium.getPort());
+		robot.setUdid(executeDetail.getUdid());
+		robot.setVerison(executeDetail.getVersion());
+		robot.setSystemPort(appium.getSystemPort());
+		
+		//svn路径映射到本地
+		String testSuiteSvnPath = executeDetail.getTestSuitePath();
+		String testSuiteLocalPath = testSuiteSvnPath.replace(productSvn.getRepository(), workspace);
+		
+		logger.info("svn测试套路径 {},本地脚本路径 {}", testSuiteSvnPath, testSuiteLocalPath);
+		
+		robot.setTestSuite(testSuiteLocalPath);
+		List<String> cmds = RobotUtils.buildParamForAndroid(robot);
+		//启动rf
+		final ProcessBuilder pb = new ProcessBuilder(cmds) .redirectErrorStream(true);
+		logger.debug("开始执行测试用例 {}", cmds);
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				// 执行测试用例
+				try {
+					boolean result = false;
+					Process process = pb.start();
+					StreamWatch inputStream = new StreamWatch(process.getInputStream());
+					inputStream.setName("RFInfo");
+					inputStream.start();
+					int status = process.waitFor();
+					if (status == 0) {
+						result = true;
+					} else {
+						result = false;
+					}
+
+					logger.info("测试用例执行完成，测试结果为 {}", result);
+					process.destroy();
+				} catch (Exception e) {
+					logger.warn("运行测试用例失败  {}", e);
+				} finally {
+					ExecuteDetail executeDetail = new ExecuteDetail();
+					executeDetail.setStatus("0");
+					executeDetail.setToken(token);
+					executeDetailService.update(executeDetail);
+					//回调bmtc平台通知结果
+					//callback
+					appiumService.stopAppium(appium.getPort());
+				}
+			}
+		}).start();
+		
+		if (null != pb) {
+			flag = true;
+		}
+		return flag;
+	}
+	
+	@Override
+	public boolean atpRunCaseForAndroid(ExecuteDetail executeDetail) {
+		boolean flag = false;
+		ProductSvn productSvn = executeDetail.getProductSvn();
+		String workspace = createLocalScriptPath(productSvn.getProductName());
+		long svnVersion = checkOutScript(productSvn, workspace);
+		
+		logger.debug("脚本更新成功svn仓库 {}中脚本版本为{}", productSvn.getRepository(), svnVersion);
+		String udid = executeDetail.getUdid();
+		String testLog = createLog(udid, productSvn.getPassword());
+		final Appium appium = appiumService.startAppium(testLog);
+
+		Robot robot = new Robot();
+		robot.setLog(testLog);
+		robot.setUrl(appium.getHost(), appium.getPort());
+		robot.setUdid(udid);
+		robot.setVerison(executeDetail.getVersion());
+		robot.setSystemPort(appium.getSystemPort());
+		robot.setCaseName(executeDetail.getCaseName());
+		robot.setTestSuite(executeDetail.getTestSuitePath());
+
+		List<String> cmds = RobotUtils.buildParamForAndroid(robot);
+		final ProcessBuilder pb = new ProcessBuilder(cmds).redirectErrorStream(true);
+		logger.debug("开始执行测试用例 {}", cmds);
+		// 执行测试用例
+		try {
+			boolean result = false;
+			Process process = pb.start();
+			StreamWatch inputStream = new StreamWatch(process.getInputStream());
+			inputStream.setName("RFInfo");
+			inputStream.start();
+			int status = process.waitFor();
+			if (status == 0) {
+				result = true;
+			} else {
+				result = false;
+			}
+
+			logger.info("测试用例执行完成，测试结果为 {}", result);
+			process.destroy();
+		} catch (Exception e) {
+			logger.warn("运行测试用例失败  {}", e);
+		} finally {
+			//测试完成关闭appium
+			appiumService.stopAppium(appium.getPort());
+			logger.info("测试完成关闭appium服务");
+		}
+		
+		if (null != pb) {
+			flag = true;
+		}
+		return flag;
+	}
+	
+	@Override
+	public boolean runTestSuiteForIOS(ExecuteDetail executeDetail) {
+		boolean flag = false;
+		ProductSvn productSvn = executeDetail.getProductSvn();
+		String workspace = createLocalScriptPath(productSvn.getProductName());
+		long svnVersion = checkOutScript(productSvn, workspace);
+		logger.debug("脚本更新成功svn仓库 {}中脚本版本为{}", productSvn.getRepository(), svnVersion);
+		//组装测试命令
+		final String token = executeDetail.getToken();
+		String testLog = createLog(executeDetail.getUdid(), productSvn.getProductName());
+		String rfLog = testLog + "/log.html";
+		String appiumLog = testLog + "/appium.txt";
+		String testReport = testLog + "/report.html";
+		
+		executeDetail.setDeviceType("IOS");
+		executeDetail.setTestReportPath(testReport);
+		executeDetail.setRfLogPath(rfLog);
+		executeDetail.setAppiumLogPath(appiumLog);
+		executeDetail.setStatus("1");
+		executeDetailService.save(executeDetail);
+		
+		//启动appium服务
+		final Appium appium = appiumService.startAppium(testLog);
+		//rf启动初始化
+		Robot robot = new Robot();
+		robot.setLog(testLog);
+		robot.setUrl(appium.getHost(), appium.getPort());
+		robot.setUdid(executeDetail.getUdid());
+		robot.setVerison(executeDetail.getVersion());
+		robot.setWdaLocalPort(appium.getWadLocalPort());
+		
+		//svn路径映射到本地
+		String testSuiteSvnPath = executeDetail.getTestSuitePath();
+		String testSuiteLocalPath = testSuiteSvnPath.replace(productSvn.getRepository(), workspace);
+		
+		logger.info("svn测试套路径 {},本地脚本路径 {}", testSuiteSvnPath, testSuiteLocalPath);
+		
+		robot.setTestSuite(testSuiteLocalPath);
+		List<String> cmds = RobotUtils.buildParamForIOS(robot);
+		//启动rf
+		final ProcessBuilder pb = new ProcessBuilder(cmds) .redirectErrorStream(true);
+		logger.debug("开始执行测试用例 {}", cmds);
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				// 执行测试用例
+				try {
+					boolean result = false;
+					Process process = pb.start();
+					StreamWatch inputStream = new StreamWatch(process.getInputStream());
+					inputStream.setName("RFInfo");
+					inputStream.start();
+					int status = process.waitFor();
+					if (status == 0) {
+						result = true;
+					} else {
+						result = false;
+					}
+
+					logger.info("测试用例执行完成，测试结果为 {}", result);
+					process.destroy();
+				} catch (Exception e) {
+					logger.warn("运行测试用例失败  {}", e);
+				} finally {
+					ExecuteDetail executeDetail = new ExecuteDetail();
+					executeDetail.setStatus("0");
+					executeDetail.setToken(token);
+					executeDetailService.update(executeDetail);
+					//回调bmtc平台通知结果
+					//callback
+					appiumService.stopAppium(appium.getPort());
+				}
+			}
+		}).start();
+		
+		if (null != pb) {
+			flag = true;
+		}
+		return flag;
+	}
+
+	@Override
+	public boolean atpRunCaseForIOS(ExecuteDetail executeDetail) {
+		boolean flag = false;
+		ProductSvn productSvn = executeDetail.getProductSvn();
+		String workspace = createLocalScriptPath(productSvn.getProductName());
+		long svnVersion = checkOutScript(productSvn, workspace);
+		
+		logger.debug("脚本更新成功svn仓库 {}中脚本版本为{}", productSvn.getRepository(), svnVersion);
+		String udid = executeDetail.getUdid();
+		String testLog = createLog(udid, productSvn.getPassword());
+		final Appium appium = appiumService.startAppium(testLog);
+
+		Robot robot = new Robot();
+		robot.setLog(testLog);
+		robot.setUrl(appium.getHost(), appium.getPort());
+		robot.setUdid(udid);
+		robot.setVerison(executeDetail.getVersion());
+		robot.setWdaLocalPort(appium.getWadLocalPort());
+		robot.setCaseName(executeDetail.getCaseName());
+		robot.setTestSuite(executeDetail.getTestSuitePath());
+
+		List<String> cmds = RobotUtils.buildParamForIOS(robot);
+		final ProcessBuilder pb = new ProcessBuilder(cmds).redirectErrorStream(true);
+		logger.debug("开始执行测试用例 {}", cmds);
+		// 执行测试用例
+		try {
+			boolean result = false;
+			Process process = pb.start();
+			StreamWatch inputStream = new StreamWatch(process.getInputStream());
+			inputStream.setName("RFInfo");
+			inputStream.start();
+			int status = process.waitFor();
+			if (status == 0) {
+				result = true;
+			} else {
+				result = false;
+			}
+			logger.info("测试用例执行完成，测试结果为 {}", result);
+			process.destroy();
+		} catch (Exception e) {
+			logger.warn("运行测试用例失败  {}", e);
+		} finally {
+			//测试完成关闭appium
+			appiumService.stopAppium(appium.getPort());
+			logger.info("测试完成关闭appium服务");
+		}
+		
+		if (null != pb) {
+			flag = true;
+		}
+		return flag;
+	}
+
+	@Override
+	public List<TestCase> getTestCase(List<String> pathList) {
+		List<TestCase> testSuiteList = new ArrayList<TestCase>();
+		for (String path : pathList) {
+			File file = new File(path);
+			if (!file.isDirectory() && !file.isFile()) {
+				logger.warn("找不到文件夹或文件 {}", path);
+				throw new BDException("找不到文件夹或文件" + path);
+			}
+
+			if (file.isDirectory()) {
+				FileUtil fileNameFileter = new FileUtil();
+				List<String> testSuitePathList = fileNameFileter.listPath(file);
+				for (String testSuitePath : testSuitePathList) {
+					TestCase testCase = new TestCase();
+					List<String> testCaseList = parseTestSuite(testSuitePath);
+					if (!testCaseList.isEmpty()) {
+						testCase.setCaseName(testCaseList);
+						testCase.setTestSuite(testSuitePath);
+						testSuiteList.add(testCase);
+					}
+				}
+
+			} else {
+				TestCase testCase = new TestCase();
+				List<String> testCaseList = parseTestSuite(path);
+				if (!testCaseList.isEmpty()) {
+					testCase.setCaseName(testCaseList);
+					testCase.setTestSuite(path);
+					testSuiteList.add(testCase);
+				}
+			}
+		}
+
+		return testSuiteList;
+	}
+
+	@Override
+	public List<String> getTestCaseName(String testSuite) {
+		List<String> caseNames = new ArrayList<String>();
+		if (testSuite.endsWith(".txt")) {
+			caseNames = parseTestSuite(testSuite);
+			return caseNames;
+		}
+		return caseNames;
+	}
+	
+	@Override
+	public List<TestCase> getAllTestCase(String testSuite) {
+		List<TestCase> testSuiteList = new ArrayList<TestCase>();
+		File file = new File(testSuite);
+		if (!file.isDirectory() && !file.isFile()) {
+			logger.warn("找不到文件夹或文件 {}", testSuite);
+			throw new BDException("找不到文件夹或文件" + testSuite);
+		}
+		FileUtil fileNameFileter = new FileUtil();
+		List<String> testSuitePathList = fileNameFileter.listPath(file);
+
+		for (String testSuitePath : testSuitePathList) {
+			TestCase testCase = new TestCase();
+			List<String> testCaseList = parseTestSuite(testSuitePath);
+			if (0 != testCaseList.size()) {
+				testCase.setCaseName(testCaseList);
+				testCase.setTestSuite(testSuitePath);
+				testSuiteList.add(testCase);
+			}
+		}
+		return testSuiteList;
+	}
+	
+	/**
+	 * 解析rf测试套中 测试用例名称
+	 * @param suite
+	 * @return List<String> [casename]
+	 */
+	
+	private List<String> parseTestSuite(String suite) {
+		List<String> testcaseList = new ArrayList<String>();
+		StringBuffer sb = new StringBuffer();
+		try {
+			BufferedReader br = null;
+			FileInputStream fis = null;
+			InputStreamReader isr = null;
+
+			fis = new FileInputStream(suite);
+			isr = new InputStreamReader(fis, "UTF-8");
+			br = new BufferedReader(isr);
+			String line;
+			while ((line = br.readLine()) != null) {
+				sb.append(line).append("\r\n");
+			}
+			br.close();
+			fis.close();
+			isr.close();
+		} catch (IOException e) {
+			logger.warn("读取测试套文件错误  {}", e);
+			throw new BDException("读取测试套文件错误" + e);
+		}
+
+		if (sb.toString().contains("*** Test Cases ***")) {
+			String testcaseDetail = sb.toString().split(
+					"[*][*][*] Test Cases [*][*][*]")[1];
+			String[] detail = testcaseDetail.split("\r\n");
+			for (String caseNameTxt : detail) {
+				if (caseNameTxt.contains("*** Keywords ***")) {
+					break;
+				}
+				if (!caseNameTxt.startsWith(" ") && !caseNameTxt.equals("")) {
+					testcaseList.add(caseNameTxt);
+				}
+			}
+		}
+		return testcaseList;
+	}
+
+	/**
+	 * 创建log根路径
+	 * @param udid
+	 * @param product
+	 * @return 
+	 */
+	private String createLog(String udid, String product) {
+		Date d = new Date();
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
+		String currentTimeStamp = sdf.format(d);
+		String rootPath = PropertiesUtils.getAutoLog();
+		String log = rootPath + "/" + product + "/" + currentTimeStamp + "-" + udid;
+		File file = new File(log);
+
+		if (!file.exists()) {
+			file.mkdirs();
+		}
+
+		return log;
+	}
+
+	/**
+	 * 从svn下载脚本
+	 * @param productSvn
+	 * @return
+	 */
+	private long checkOutScript(ProductSvn productSvn, String scriptLocalPath){
+		long scriptVersion = 0;
+		String url = productSvn.getRepository();
+		String userName =  productSvn.getUsername();
+		String password =  productSvn.getPassword();
+		File workSpace = new File(scriptLocalPath);
+		
+		try {
+			scriptVersion = updateLocalCodeBySvnRepoService.updateLocalCodeBySvnRepo(url, userName, password, workSpace, null);
+			logger.info("测试脚本版本 {}", scriptVersion);
+		} catch (SVNException e1) {
+			logger.error("svn下载脚本异常，请检查svn参数是否正确{} {}", productSvn, e1);
+			e1.printStackTrace();
+		}
+		return scriptVersion;
+	}
+	/**
+	 * 创建脚本本地路径
+	 * @param productSvn
+	 * @return
+	 */
+	private String createLocalScriptPath(String productName){
+		String workSpaceRoot = PropertiesUtils.getSvnRootPath();
+		String realScriptLocalpath = workSpaceRoot + "/" + productName;
+		
+		return realScriptLocalpath;
+	}
+	
+}

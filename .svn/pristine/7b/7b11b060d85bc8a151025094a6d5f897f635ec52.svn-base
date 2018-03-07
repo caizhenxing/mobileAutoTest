@@ -1,0 +1,235 @@
+package com.bmtc.device.service.impl;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+
+import com.bmtc.device.domain.Device;
+import com.bmtc.device.service.DevicesService;
+import com.bmtc.device.utils.ExecuteCmdUtils;
+import com.bmtc.device.utils.PropertiesUtils;
+
+@Service
+public class DevicesServiceImpl implements DevicesService {
+
+	@Override
+	public List<Device> getAllAndroidInfo() {
+		List<Device> deviceInfoList = new ArrayList<Device>();
+		List<String> udidList = getAndroidDevicesUDID();
+
+		for (String udid : udidList) {
+			String deviceName = getAndroidDeviceName(udid);
+			String platformVerison = getAndroidPlatformVersion(udid);
+			String resolution = getAndroidResolution(udid);
+			String status = getAndroidStatus(udid);
+			Device device = new Device();
+			
+			device.setUdid(udid);
+			device.setName(deviceName);
+			device.setResolution(resolution);
+			device.setVerison(platformVerison);
+			device.setStatus(status);
+			deviceInfoList.add(device);
+		}
+
+		return deviceInfoList;
+	}
+	
+	@Override
+	public List<Device> getAllIOSInfo() {
+		List<Device> deviceInfoList = new ArrayList<Device>();
+		List<String> udidList = getIOSDevicesUDID();
+		
+		for (String udid : udidList) {
+			String deviceName = getIOSDeviceName(udid);
+			String platformVerison = getIOSPlatformVersion(udid);
+			String status = getIOSStatus(udid);
+			
+			Device device = new Device();
+			
+			device.setUdid(udid);
+			device.setName(deviceName);
+			device.setResolution(null);
+			device.setVerison(platformVerison);
+			device.setStatus(status);
+			deviceInfoList.add(device);
+		}
+
+		return deviceInfoList;
+	}
+	
+	@Override
+	public Device getAndroidInfoByUdid(String udid){
+		String deviceName = getAndroidDeviceName(udid);
+		String platformVerison = getAndroidPlatformVersion(udid);
+		String resolution = getAndroidResolution(udid);
+		String status = getAndroidStatus(udid);
+		Device device = new Device();
+		
+		device.setUdid(udid);
+		device.setName(deviceName);
+		device.setResolution(resolution);
+		device.setVerison(platformVerison);
+		device.setStatus(status);
+		
+		return device;
+	}
+	
+	@Override
+	public Device getIOSInfoByUdid(String udid){
+		
+		return null;
+	}
+	
+	/**
+	 * 获取所有设备udid（执行设备）
+	 * 
+	 * @return 设备udid列表
+	 */
+	public List<String> getAndroidDevicesUDID() {
+		List<String> udidList = new ArrayList<String>();
+		String shell = PropertiesUtils.getAndroidUdidSh();
+		StringBuffer udidInfo = ExecuteCmdUtils.executeCmd(shell);
+		String[] udidInfoList = udidInfo.toString().split("\r\n");
+
+		for (String str : udidInfoList) {
+			if (!str.startsWith("List") && str.endsWith("device")) {
+				udidList.add(str.replace("device", "").trim());
+			}
+		}
+
+		return udidList;
+	}
+
+	/**
+	 * 获取设备android版本号
+	 * 
+	 * @param udid
+	 * @return
+	 */
+	public String getAndroidPlatformVersion(String udid) {
+		String platformVersion = "";
+		String shell = PropertiesUtils.getAndroidVersionSh(udid);
+		StringBuffer platformVersionInfo = ExecuteCmdUtils.executeCmd(shell);
+		platformVersion = platformVersionInfo.toString().replace("\r\n", "");
+		return platformVersion;
+	}
+
+	/**
+	 * 获取设备分辨率
+	 * 
+	 * @param udid
+	 * @return
+	 */
+	public String getAndroidResolution(String udid) {
+		String deviceResolution="";
+		String shell = PropertiesUtils.getAndroidResolutionSh(udid);
+		StringBuffer deviceResolutionInfo = ExecuteCmdUtils.executeCmd(shell);
+		deviceResolution = deviceResolutionInfo.toString().
+				replace("Physical size:", "").replace("\r\n", "").trim();
+		return deviceResolution;
+	}
+
+	/**
+	 * 获取设备名称
+	 * 
+	 * @param udid
+	 * @return
+	 */
+	public String getAndroidDeviceName(String udid) {
+		String deviceName = "";
+		//型号
+		String modelSh = PropertiesUtils.getAndroidModelSh(udid);
+		//品牌
+		String brandSh = PropertiesUtils.getAndroidBrandSh(udid);
+		String model = ExecuteCmdUtils.executeCmd(modelSh).toString();
+		String brand = ExecuteCmdUtils.executeCmd(brandSh).toString();
+		deviceName = (brand + " " + model).replace("\r\n", "").trim();
+		
+		return deviceName;
+	}
+	
+	/**
+	 * 获取设备状态
+	 * 
+	 * @param udid
+	 * @return 1:运行中，0： 空闲
+	 */
+	public String getAndroidStatus(String udid) {
+		String status = "0";
+		String shell = PropertiesUtils.getAndroidStatusSh(udid);
+		StringBuffer androidInfo = ExecuteCmdUtils.executeCmd(shell);
+
+		if (androidInfo !=null && androidInfo.toString().contains("appium")) {
+			status = "1";
+			return status;
+		}
+		
+		return status;
+	}
+	/**
+	 * IOS获取所有设备udid（执行设备）
+	 * @return
+	 */
+	public List<String> getIOSDevicesUDID(){
+		String shell = PropertiesUtils.getIOSUdidSh();
+		List<String> udidList = ExecuteCmdUtils.execute(shell);
+		return udidList;
+	}
+	
+	/**
+	 * 获取设备IOS版本号
+	 * @param udid
+	 * @return
+	 */
+	public String getIOSPlatformVersion(String udid){
+		String shell = PropertiesUtils.getIOSVersionSh(udid);
+		StringBuffer verisonInfo = ExecuteCmdUtils.executeCmd(shell);
+		String verison = verisonInfo.toString();
+		return verison;
+	}
+	
+	/**
+	 * IOS获取设备分辨率,未实现
+	 * 
+	 * @param udid
+	 * @return
+	 */
+	public String getIOSResolution(String udid) {
+		
+		return null;
+	}
+
+	/**
+	 * IOS获取设备名称
+	 * 
+	 * @param udid
+	 * @return
+	 */
+	public String getIOSDeviceName(String udid) {
+		String shell = PropertiesUtils.getIOSNameSh(udid);
+		StringBuffer deviceNameInfo = ExecuteCmdUtils.executeCmd(shell);
+		String deviceName = deviceNameInfo.toString();
+		return deviceName;
+	}
+	
+	/**
+	 * IOS获取设备状态
+	 * 
+	 * @param udid
+	 * @return 1:运行中，0： 空闲
+	 */
+	public String getIOSStatus(String udid) {
+		String status = "0";
+		String shell = PropertiesUtils.getIOSStatusSh(udid);
+		StringBuffer iosInfo = ExecuteCmdUtils.executeCmd(shell);
+
+		if (iosInfo !=null && iosInfo.toString().contains("iproxy")) {
+			status = "1";
+			return status;
+		}
+		
+		return status;
+	}
+}

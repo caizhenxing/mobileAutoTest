@@ -1,0 +1,34 @@
+package com.bmtc.common.controller;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+
+import com.bmtc.common.utils.ShiroUtils;
+import com.bmtc.system.domain.UserDO;
+import com.bmtc.system.service.DeptService;
+
+@Controller
+public class BaseController {
+	
+	@Autowired
+	DeptService deptService;
+	
+	public UserDO getUser() {
+		return ShiroUtils.getUser();
+	}
+	public Long getUserId() {
+		return getUser().getUserId();
+	}
+	public Integer getDeptId(){
+		return ShiroUtils.getUser().getDeptId();
+	}
+	public String getDeptName() {
+		return deptService.get(ShiroUtils.getUser().getDeptId()).getName();
+	}
+	public String getUsername() {
+		return getUser().getUsername();
+	}
+	public String getSvnName() {
+		return deptService.get(getDeptId()).getSvnName();
+	}
+}

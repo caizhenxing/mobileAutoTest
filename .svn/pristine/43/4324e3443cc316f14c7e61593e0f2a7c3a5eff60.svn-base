@@ -1,0 +1,53 @@
+package com.bmtc.device.domain;
+
+import java.io.Serializable;
+import java.util.List;
+
+/**
+ * @author: Jason.ma
+ * @date: 2018年1月9日下午3:06:33
+ *
+ */
+public class TestCase implements Serializable {
+	private static final long serialVersionUID = -1L;
+
+	private String testSuite;
+	private List<String> caseName;
+	
+	public TestCase() {
+		super();
+	}
+
+	public TestCase(String testSuite) {
+		super();
+		this.testSuite = testSuite;
+	}
+
+	public TestCase(String testSuite, List<String> caseName) {
+		super();
+		this.testSuite = testSuite;
+		this.caseName = caseName;
+	}
+
+	public List<String> getCaseName() {
+		return caseName;
+	}
+
+	public void setCaseName(List<String> caseName) {
+		this.caseName = caseName;
+	}
+
+	public String getTestSuite() {
+		return testSuite;
+	}
+
+	public void setTestSuite(String testSuite) {
+		this.testSuite = testSuite;
+	}
+
+	@Override
+	public String toString() {
+		return "TestCase [testSuite=" + testSuite + ", caseName=" + caseName
+				+ "]";
+	}
+}

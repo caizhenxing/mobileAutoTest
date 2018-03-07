@@ -1,0 +1,42 @@
+package com.bmtc.system.dao;
+
+import com.bmtc.system.domain.DeptDO;
+
+import java.util.List;
+import java.util.Map;
+
+import org.apache.ibatis.annotations.Mapper;
+
+/**
+ * 部门管理
+ * @author chglee
+ * @email 1992lcg@163.com
+ * @date 2017-10-03 15:35:39
+ */
+@Mapper
+public interface DeptDao {
+	
+	//通过产品机构id获取产品机构对象
+	DeptDO get(Integer deptId);
+	
+	//查询产品机构数据
+	List<DeptDO> list(Map<String,Object> map);
+	
+	//统计产品机构总数
+	int count(Map<String,Object> map);
+	
+	//保存产品机构
+	int save(DeptDO dept);
+	
+	//更新产品机构
+	int update(DeptDO dept);
+	
+	//查询父id
+	Long[] listParentDept();
+	
+	//通过产品id获取关联的用个数
+	int getDeptUserNumber(Integer deptId);
+	
+	//通过产品名获取产品对象
+	DeptDO getName(String name);
+}

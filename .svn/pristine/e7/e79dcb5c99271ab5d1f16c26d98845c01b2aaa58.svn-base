@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.bmtc.svn.dao.SvnConfDiffDao">
+	<resultMap id="BaseResultMap" type="com.bmtc.svn.domain.SvnConfDiff" >
+		<id column="id" property="id" />
+		<result column="svn_repo_id" property="svnRepoId" />
+		<result column="svn_repo_name" property="svnRepoName" />
+		<result column="svn_repo_path" property="svnRepoPath" />
+		<result column="svn_repo_url" property="svnRepoUrl" />
+		<result column="svn_repo_des" property="svnRepoDes" />
+		<result column="passwd_status" property="passwdStatus" />
+		<result column="passwd_content_diff" property="passwdContentDiff" />
+		<result column="authz_status" property="authzStatus" />
+		<result column="authz_content_diff" property="authzContentDiff" />
+		<result column="svnserver_status" property="svnserverStatus" />
+		<result column="svnserver_content_diff" property="svnserverContentDiff" />
+		<result column="create_date" property="createDate" />
+		<result column="modify_date" property="modifyDate" />
+	</resultMap>
+
+	<resultMap id="SvnConfDiffInfoResultMap" type="com.bmtc.svn.domain.SvnConfDiffInfo" >
+		<id column="id" property="id" />
+		<result column="svn_repo_id" property="svnRepoId" />
+		<result column="svn_repo_name" property="svnRepoName" />
+		<result column="svn_repo_path" property="svnRepoPath" />
+		<result column="svn_repo_url" property="svnRepoUrl" />
+		<result column="svn_repo_des" property="svnRepoDes" />
+		<result column="passwd_status" property="passwdStatus" />
+		<result column="passwd_content_diff" property="passwdContentDiff" />
+		<result column="authz_status" property="authzStatus" />
+		<result column="authz_content_diff" property="authzContentDiff" />
+		<result column="svnserver_status" property="svnserverStatus" />
+		<result column="svnserver_content_diff" property="svnserverContentDiff" />
+		<result column="create_date" property="createDate" />
+		<result column="modify_date" property="modifyDate" />
+	</resultMap>
+
+	<sql id="Base_Column_List" >
+    	id, svn_repo_id, passwd_status, passwd_content_diff, authz_status, authz_content_diff,
+    	svnserver_status, svnserver_content_diff, create_date, modify_date
+    </sql>
+
+	<select id="get" resultType="com.bmtc.svn.domain.SvnConfDiffInfo">
+		select
+		<include refid="Base_Column_List" /> 
+		from
+			svn_conf_diff
+		where
+			 id = #{id}
+	</select>
+	
+	<select id="getSvnConfDiff" resultType="com.bmtc.svn.domain.SvnConfDiffInfo" parameterType="java.lang.String">
+		select
+		a.id, a.svn_repo_id, a.passwd_status, a.passwd_content_diff, 
+		a.authz_status, a.authz_content_diff,
+    	a.svnserver_status, a.svnserver_content_diff, a.create_date, a.modify_date,
+    	b.svn_repo_name, b.svn_repo_path, b.svn_repo_url, b.svn_repo_des
+		from 
+			svn_conf_diff a join svn_repo b on (a.svn_repo_id = b.svn_repo_id)
+		where b.svn_repo_name = #{svnRepoName}
+	</select>
+	
+	<select id="list" resultMap="SvnConfDiffInfoResultMap">
+		select
+		a.id, a.svn_repo_id, a.passwd_status, a.passwd_content_diff, 
+		a.authz_status, a.authz_content_diff,
+    	a.svnserver_status, a.svnserver_content_diff, a.create_date, a.modify_date,
+    	b.svn_repo_name, b.svn_repo_path, b.svn_repo_url, b.svn_repo_des
+		from 
+			svn_conf_diff a join svn_repo b on (a.svn_repo_id = b.svn_repo_id)
+		<where>
+			<if test="id != null">
+			 and a.id = #{id} </if>
+			<if test="svnRepoId != null">
+			 and a.svn_repo_id = #{svnRepoId} </if>
+			<if test="passwdStatus != null and passwdStatus != ''">
+			 and a.passwd_status = #{passwdStatus} </if>
+			<if test="passwdContentDiff != null and passwdContentDiff != ''">
+			 and a.passwd_content_diff = #{passwdContentDiff} </if>
+			<if test="authzStatus != null and authzStatus != ''">
+			 and a.authz_status = #{authzStatus} </if>
+			<if test="authzContentDiff != null and authzContentDiff != ''">
+			 and a.authz_content_diff = #{authzContentDiff} </if>
+			<if test="svnserverStatus != null and svnserverStatus != ''">
+			 and a.svnserver_status = #{svnserverStatus} </if>
+			<if test="svnserverContentDiff != null and svnserverContentDiff != ''">
+			 and a.svnserver_content_diff = #{svnserverContentDiff} </if>
+			<if test="svnRepoName != null and svnRepoName != ''">
+			 and b.svn_repo_name = #{svnRepoName} </if>
+		</where>
+		<choose>
+			<when test="sort != null and sort.trim() != ''">
+				order by ${sort} ${order}
+			</when>
+			<otherwise>
+				order by a.id
+			</otherwise>
+		</choose>
+		<if test="offset != null and limit != null">
+			limit #{offset}, #{limit}
+		</if>
+	</select>
+
+	<select id="count" resultType="int">
+		select count(*) from 
+			svn_conf_diff a join svn_repo b on (a.svn_repo_id = b.svn_repo_id)
+		<where>
+			<if test="id != null">
+			 and a.id = #{id} </if>
+			<if test="svnRepoId != null">
+			 and a.svn_repo_id = #{svnRepoId} </if>
+			<if test="passwdStatus != null and passwdStatus != ''">
+			 and a.passwd_status = #{passwdStatus} </if>
+			<if test="passwdContentDiff != null and passwdContentDiff != ''">
+			 and a.passwd_content_diff = #{passwdContentDiff} </if>
+			<if test="authzStatus != null and authzStatus != ''">
+			 and a.authz_status = #{authzStatus} </if>
+			<if test="authzContentDiff != null and authzContentDiff != ''">
+			 and a.authz_content_diff = #{authzContentDiff} </if>
+			<if test="svnserverStatus != null and svnserverStatus != ''">
+			 and a.svnserver_status = #{svnserverStatus} </if>
+			<if test="svnserverContentDiff != null and svnserverContentDiff != ''">
+			 and a.svnserver_content_diff = #{svnserverContentDiff} </if>
+			<if test="svnRepoName != null and svnRepoName != ''">
+			 and b.svn_repo_name = #{svnRepoName} </if>
+		</where>
+	</select>
+
+	<insert id="save" parameterType="com.bmtc.svn.domain.SvnConfDiff">
+		insert into svn_conf_diff
+		(
+		svn_repo_id,
+		passwd_status,
+		passwd_content_diff,
+		authz_status,
+		authz_content_diff,
+		svnserver_status, 
+		svnserver_content_diff,
+		create_date,
+		modify_date
+		)
+		values
+		(
+		#{svnRepoId},
+		#{passwdStatus},
+		#{passwdContentDiff},
+		#{authzStatus},
+		#{authzContentDiff},
+		#{svnserverStatus},
+		#{svnserverContentDiff},
+		#{createDate},
+		#{modifyDate}
+		)
+	</insert>
+
+	<update id="update" parameterType="com.bmtc.svn.domain.SvnConfDiff">
+		update svn_conf_diff
+		<set>
+			<if test="svnRepoId != null">
+			 	svn_repo_id = #{svnRepoId},
+			</if>
+			<if test="passwdStatus != null and passwdStatus != ''">
+			 	passwd_status = #{passwdStatus}, 
+			</if>
+			<if test="passwdContentDiff != null and passwdContentDiff != ''">
+			 	passwd_content_diff = #{passwdContentDiff}, 
+			</if>
+			<if test="authzStatus != null and authzStatus != ''">
+			 	authz_status = #{authzStatus},
+			</if>
+			<if test="authzContentDiff != null and authzContentDiff != ''">
+			 	authz_content_diff = #{authzContentDiff}, 
+			</if>
+			<if test="svnserverStatus != null and svnserverStatus != ''">
+			 	svnserver_status = #{svnserverStatus},
+			</if>
+			<if test="svnserverContentDiff != null and svnserverContentDiff != ''">
+			 	svnserver_content_diff = #{svnserverContentDiff},
+			</if>
+			<if test="modifyDate != null">
+				modify_date = #{modifyDate} 
+			</if>
+		</set>
+		where svn_repo_id = #{svnRepoId} 
+	</update>
+
+	<delete id="remove">
+		delete from svn_conf_diff where id = #{id}
+	</delete>
+
+	<delete id="batchRemove">
+		delete from svn_conf_diff where id in
+		<foreach item="id" collection="array" open="(" separator="," close=")">
+			#{id}
+		</foreach>
+	</delete>
+	
+</mapper>

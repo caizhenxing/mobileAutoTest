@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+<head th:include="include::header"></head>
+<body class="gray-bg">
+	<div class="wrapper wrapper-content animated fadeInRight">
+		<div class="row">
+			<div class="col-sm-12">
+				<div class="ibox float-e-margins">
+					<div class="ibox-content">
+						<form class="form-horizontal m-t" id="signupForm">
+							<input id="batchId" name="batchId" type="hidden"
+								th:value="${batch.batchId}"> <input id="menuIds"
+								name="menuIds" type="hidden">
+							<div class="form-group">
+								<label class="col-sm-3 control-label">产品名：</label>
+								<div class="col-sm-8">
+									<input id="batchName" name="batchName" class="form-control"
+										type="text" th:value="${batch.batchName}">
+								</div>
+							</div>
+							<div class="form-group">
+								<label class="col-sm-3 control-label">起始时间：</label>
+								<div class="col-sm-8">
+									<input id="startDate" name="startDate" class="form-control"
+										type="text" th:value="${batch.startDate}">
+								</div>
+							</div>
+							<div class="form-group">
+								<label class="col-sm-3 control-label">结束时间：</label>
+								<div class="col-sm-8">
+									<input id="endDate" name="endDate" class="form-control"
+										type="text" th:value="${batch.endDate}">
+								</div>
+							</div>
+							<div class="form-group">
+								<label class="col-sm-3 control-label">分支路径：</label>
+								<div class="col-sm-8">
+									<input id="batchSvnPath" name="batchSvnPath" class="form-control"
+										type="text" th:value="${batch.batchSvnPath}">
+								</div>
+							</div>
+
+							<div class="form-group">
+								<div class="col-sm-8 col-sm-offset-3">
+									<button type="submit" class="btn btn-primary">提交</button>
+								</div>
+							</div>
+						</form>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div th:include="include::footer"></div>
+	<script src="/js/appjs/sys/batch/edit.js"></script>
+</body>
+
+</html>

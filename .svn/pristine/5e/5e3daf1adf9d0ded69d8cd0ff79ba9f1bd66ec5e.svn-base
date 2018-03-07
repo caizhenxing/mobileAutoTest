@@ -1,0 +1,108 @@
+package com.bmtc.task.domain;
+
+import java.io.Serializable;
+
+/**
+ * 测试任务的执行计划实体类
+ * @author Administrator
+ *
+ */
+public class ExecutePlan implements Serializable{
+
+	/**
+	 * 属性
+	 */
+	private static final long serialVersionUID = 1L;
+	// 主键
+	private Long id;
+	// 脚本库路径
+	private String svnPath;
+	// 产品机构id
+	private Long deptId;
+	// 测试任务名称
+	private String taskName;
+	// 测试任务id
+	private Long taskId;
+	// 触发方式字段
+	private String triggerMode;
+	// 触发条件字段
+	private String condition;
+	// 执行设备:(1，Android，2，IOS)
+	private Long deviceType;
+	// 执行状态:0,空闲;1,执行中
+	private Long status;
+	/**
+	 * 构造
+	 */
+	public ExecutePlan() {
+		super();
+	}
+	/**
+	 * set&get
+	 */
+	public Long getId() {
+		return id;
+	}
+	public void setId(Long id) {
+		this.id = id;
+	}
+	
+	public String getSvnPath() {
+		return svnPath;
+	}
+	public void setSvnPath(String svnPath) {
+		this.svnPath = svnPath;
+	}
+	public String getTaskName() {
+		return taskName;
+	}
+	public void setTaskName(String taskName) {
+		this.taskName = taskName;
+	}
+	public Long getTaskId() {
+		return taskId;
+	}
+	public void setTaskId(Long taskId) {
+		this.taskId = taskId;
+	}
+	public Long getDeptId() {
+		return deptId;
+	}
+	public String getTriggerMode() {
+		return triggerMode;
+	}
+	public void setTriggerMode(String triggerMode) {
+		this.triggerMode = triggerMode;
+	}
+	public String getCondition() {
+		return condition;
+	}
+	public void setCondition(String condition) {
+		this.condition = condition;
+	}
+	public Long getDeviceType() {
+		return deviceType;
+	}
+	public void setDeviceType(Long deviceType) {
+		this.deviceType = deviceType;
+	}
+	public Long getStatus() {
+		return status;
+	}
+	public void setStatus(Long status) {
+		this.status = status;
+	}
+	public void setDeptId(Long deptId) {
+		this.deptId = deptId;
+	}
+	/**
+	 * toString
+	 */
+	@Override
+	public String toString() {
+		return "ExecutePlan [id=" + id + ", svnPath=" + svnPath + ", deptId="
+				+ deptId + ", taskName=" + taskName + ", taskId=" + taskId
+				+ ", triggerMode=" + triggerMode + ", condition=" + condition
+				+ ", deviceType=" + deviceType + ", status=" + status + "]";
+	}
+}

@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.bmtc.script.dao.ScriptDao">
+	<resultMap type="com.bmtc.script.domain.Script" id = "rScript">
+		<id property = "scriptId" column = "script_id"/>
+		<result property = "scriptName" column = "script_name" />
+		<result property = "tag" column = "tag" />
+		<result property = "testSuitPath" column = "test_suit_path" />
+		<result property = "testCaseInfo" column = "test_case_info" />
+		<result property = "updateUserId" column = "last_modified" />
+		<result property = "gmtModified" column = "gmt_modified" />
+	</resultMap>
+	
+	<select id="get" resultType="com.bmtc.script.domain.Script" resultMap="rScript">
+		select
+		`script_id`,
+		`script_name`,
+		`tag`,
+		`test_suit_path`,
+		`test_case_info`,
+		`last_modified`,
+		`gmt_modified`
+		from test_script 
+		where 
+		script_id = #{value}
+	</select>
+	
+	<select id="getScriptByTestSuitPath" resultType="com.bmtc.script.domain.Script" resultMap="rScript">
+		select
+		`script_id`,
+		`script_name`,
+		`tag`,
+		`test_suit_path`,
+		`test_case_info`,
+		`last_modified`,
+		`gmt_modified`
+		from test_script 
+		where 
+		test_suit_path = #{testSuitPath}
+	</select>
+
+	<select id="list" resultType="com.bmtc.script.domain.Script">
+		select
+		`script_id`,
+		`script_name`,
+		`tag`,
+		`test_suit_path`,
+		`test_case_info`,
+		`last_modified`,
+		`gmt_modified`
+		from test_script
+		<where>
+			<if test="scriptId != null and scriptId != ''"> and script_id = #{scriptId} </if>
+			<if test="scriptName != null and scriptName != ''"> and script_name = #{scriptName} </if>
+			<if test="tag != null and tag != ''"> and tag = #{tag} </if>
+			<if test="testSuitPath != null and testSuitPath != ''"> and test_suit_path = #{testSuitPath} </if>
+			<if test="updateUserId != null and updateUserId != ''"> and last_modified = #{updateUserId} </if>
+			<if test="gmtModified != null and gmtModified != ''"> and gmt_modified = #{gmtModified} </if>
+			<if test="testCaseInfo != null and testCaseInfo != ''"> and test_case_info = #{testCaseInfo} </if>
+		</where>
+		<choose>
+			<when test="sort != null and sort.trim() != ''">
+				order by ${sort} ${order}
+			</when>
+			<otherwise>
+				order by script_id desc
+			</otherwise>
+		</choose>
+		<if test="offset != null and limit != null">
+			limit #{offset}, #{limit}
+		</if>
+	</select>
+
+	<select id="count" resultType="int">
+		select count(*) from test_script
+		<where>
+			<if test="scriptId != null and scriptId != ''"> and script_id = #{scriptId} </if>
+			<if test="scriptName != null and scriptName != ''"> and script_name = #{scriptName} </if>
+			<if test="tag != null and tag != ''"> and tag = #{tag} </if>
+			<if test="testSuitPath != null and testSuitPath != ''"> and test_suit_path = #{testSuitPath} </if>
+			<if test="updateUserId != null and updateUserId != ''"> and last_modified = #{updateUserId} </if>
+			<if test="gmtModified != null and gmtModified != ''"> and gmt_modified = #{gmtModified} </if>
+			<if test="testCaseInfo != null and testCaseInfo != ''"> and test_case_info = #{testCaseInfo} </if>
+		</where>
+	</select>
+
+	<insert id="save" parameterType="com.bmtc.script.domain.Script"
+		useGeneratedKeys="true" keyProperty="scriptId">
+		insert into test_script
+		(
+		`script_name`,
+		`tag`,
+		`test_suit_path`,
+		`test_case_info`,
+		`last_modified`,
+		`gmt_modified`
+		)
+		values
+		(
+		#{scriptName},
+		#{tag},
+		#{testSuitPath},
+		#{testCaseInfo},
+		#{updateUserId},
+		#{gmtModified}
+		)
+	</insert>
+
+	<update id="update" parameterType="com.bmtc.script.domain.Script">
+		update test_script
+		<set>
+			<if test="scriptName != null">`script_name` = #{scriptName}, </if>
+			<if test="tag != null">`tag` = #{tag}, </if>
+			<if test="testSuitPath != null">`test_suit_path` = #{testSuitPath}, </if>
+			<if test="testCaseInfo != null">`test_case_info` = #{testCaseInfo}, </if>
+			<if test="updateUserId != null">`last_modified` = #{updateUserId}, </if>
+			<if test="gmtModified != null">`gmt_modified` = #{gmtModified}</if>
+		</set>
+		where script_id = #{scriptId}
+	</update>
+
+	<delete id="remove">
+		delete from test_script where script_id = #{value}
+	</delete>
+
+	<delete id="batchRemove">
+		delete from test_script where script_id in
+		<foreach item="scriptId" collection="array" open="(" separator=","
+			close=")">
+			#{scriptId}
+		</foreach>
+	</delete>
+
+</mapper>

@@ -1,0 +1,294 @@
+package com.bmtc.system.controller;
+
+import com.bmtc.common.annotation.Log;
+import com.bmtc.common.config.Constant;
+import com.bmtc.common.controller.BaseController;
+import com.bmtc.common.domain.Tree;
+import com.bmtc.common.service.DictService;
+import com.bmtc.common.utils.MD5Utils;
+import com.bmtc.common.utils.PageUtils;
+import com.bmtc.common.utils.Query;
+import com.bmtc.common.utils.R;
+import com.bmtc.system.domain.DeptDO;
+import com.bmtc.system.domain.RoleDO;
+import com.bmtc.system.domain.UserDO;
+import com.bmtc.system.service.RoleService;
+import com.bmtc.system.service.UserService;
+
+import org.apache.shiro.authz.annotation.RequiresPermissions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.*;
+
+import java.net.MalformedURLException;
+import java.util.List;
+import java.util.Map;
+
+@RequestMapping("/sys/user")
+@Controller
+public class UserController extends BaseController {
+	private static final Logger logger = LoggerFactory
+			.getLogger(UserController.class);
+	
+	private String prefix="system/user";
+	
+	@Autowired
+	UserService userService;
+	@Autowired
+	RoleService roleService;
+	@Autowired
+	DictService dictService;
+	
+	@RequiresPermissions("sys:user:user")
+	@Log("跳转到用户界面")
+	@GetMapping("")
+	String user(Model model) {
+		return prefix + "/user";
+	}
+
+	@GetMapping("/list")
+	@Log("查询列表数据")
+	@ResponseBody
+	PageUtils list(@RequestParam Map<String, Object> params) {
+		logger.info("UserController.list() start");
+		Query query = new Query(params);
+		List<UserDO> sysUserList = userService.list(query);
+		int total = userService.count(query);
+		PageUtils pageUtil = new PageUtils(sysUserList, total);
+		logger.info("UserController.list() end");
+		return pageUtil;
+	}
+
+	@RequiresPermissions("sys:user:add")
+	@Log("添加用户")
+	@GetMapping("/add")
+	String add(Model model) {
+		logger.info("UserController.add() start");
+		List<RoleDO> roles = roleService.list();
+		model.addAttribute("roles", roles);
+		logger.info("UserController.add() end");
+		return prefix + "/add";
+	}
+
+	@RequiresPermissions("sys:user:edit")
+	@Log("编辑用户")
+	@GetMapping("/edit/{id}")
+	String edit(Model model, @PathVariable("id") Long id) {
+		logger.info("UserController.edit() start");
+		UserDO userDO = userService.get(id);
+		List<DeptDO> products = userService.getProductsByUserId(id);
+		String deptName = "";
+		for (DeptDO deptDO : products) {
+			deptName += deptDO.getName() + "  ";
+		}
+		userDO.setDeptName(deptName);
+		model.addAttribute("user", userDO);
+		List<RoleDO> roles = roleService.list(id);
+		model.addAttribute("roles", roles);
+		logger.info("UserController.edit() end");
+		return prefix+"/edit";
+	}
+
+	@RequiresPermissions("svn:svnUser:add")
+	@Log("添加svn用户")
+	@GetMapping("/addSvnUser/{id}")
+	String addSvnUser(Model model, @PathVariable("id") Long id) {
+		logger.info("UserController.addSvnUser() start");
+		UserDO userDO = userService.get(id);
+		model.addAttribute("user", userDO);
+		logger.info("UserController.addSvnUser() end");
+		return "svn/svnUser/add";
+	}
+	
+	@RequiresPermissions("svn:svnUser:del")
+	@Log("删除svn用户")
+	@GetMapping("/delSvnUser/{id}")
+	String delSvnUser(Model model, @PathVariable("id") Long id) {
+		logger.info("UserController.delSvnUser() start");
+		UserDO userDO = userService.get(id);
+		model.addAttribute("user", userDO);
+		logger.info("UserController.delSvnUser() end");
+		return "svn/svnUser/del";
+	}
+	
+	@RequiresPermissions("svn:svnUser:resetPwd")
+	@Log("重置SVN密码")
+	@GetMapping("/resetSvnUserPwd/{id}")
+	String resetSvnUserPwd(Model model, @PathVariable("id") Long id) {
+		logger.info("UserController.resetSvnUserPwd() start");
+		UserDO userDO = userService.get(id);
+		model.addAttribute("user", userDO);
+		logger.info("UserController.resetSvnUserPwd() end");
+		return "svn/svnUser/resetPwd";
+	}
+	
+	
+	//@RequiresPermissions("sys:user:add")
+	@Log("保存用户")
+	@PostMapping("/save")
+	@ResponseBody
+	R save(UserDO user)  {
+		logger.info("UserController.save() start");
+		try {
+			user.setPassword(MD5Utils.encryptPureMD5( user.getPassword()));
+			if (userService.save(user) > 0) {
+				return R.ok();
+			}else if(userService.save(user) == -1){
+				return R.error(-1, "请选择同一部门下的同一团队下的产品");
+			}else if(userService.save(user) == -2){
+				return R.error(-2, "注册失败请联系管理员");
+			}
+		} catch (MalformedURLException e) {
+			e.printStackTrace();
+			logger.info("urllink为空或格式不正确");
+			return R.error("服务器异常,请联系管理员");
+		}catch (Exception e1) {
+			e1.printStackTrace();
+			logger.info("MD5加密异常");
+			return R.error("注册异常请联系管理员");
+		}
+		logger.info("UserController.save() end");
+		return R.error();
+	}
+
+	@RequiresPermissions("sys:user:edit")
+	@Log("更新用户")
+	@PostMapping("/update")
+	@ResponseBody
+	R update(UserDO user) {
+		logger.info("UserController.update() start");
+		if (Constant.DEMO_ACCOUNT.equals(getUsername())) {
+			return R.error(1, "演示系统不允许修改,完整体验请部署程序");
+		}
+		if (userService.update(user) > 0) {
+			logger.info("UserController.update() end");
+			return R.ok();
+		}else if(userService.update(user) == -1){
+			return R.error(-1, "请选择同一部门下的同一团队下的产品");
+		}
+		logger.info("UserController.update() end");
+		return R.error();
+	}
+
+
+	@RequiresPermissions("sys:user:edit")
+	@Log("更新用户个人资料")
+	@PostMapping("/updatePeronal")
+	@ResponseBody
+	R updatePeronal(UserDO user) {
+		logger.info("UserController.updatePeronal() start");
+		if (Constant.DEMO_ACCOUNT.equals(getUsername())) {
+			return R.error(1, "演示系统不允许修改,完整体验请部署程序");
+		}
+		if (userService.updatePersonal(user) > 0) {
+			logger.info("UserController.updatePeronal() end");
+			return R.ok();
+		}
+		logger.info("UserController.updatePeronal() end");
+		return R.error();
+	}
+
+
+	@RequiresPermissions("sys:user:remove")
+	@Log("删除用户")
+	@PostMapping("/remove")
+	@ResponseBody
+	R remove(Long id) {
+		logger.info("UserController.remove() start");
+		if (Constant.DEMO_ACCOUNT.equals(getUsername())) {
+			return R.error(1, "演示系统不允许修改,完整体验请部署程序");
+		}
+		if (userService.remove(id) > 0) {
+			logger.info("UserController.remove() end");
+			return R.ok();
+		}
+		logger.info("UserController.remove() end");
+		return R.error();
+	}
+
+	@RequiresPermissions("sys:user:batchRemove")
+	@Log("批量删除用户")
+	@PostMapping("/batchRemove")
+	@ResponseBody
+	R batchRemove(@RequestParam("ids[]") Long[] userIds) {
+		logger.info("UserController.batchRemove() start");
+		if (Constant.DEMO_ACCOUNT.equals(getUsername())) {
+			return R.error(1, "演示系统不允许修改,完整体验请部署程序");
+		}
+		int r = userService.batchremove(userIds);
+		if (r > 0) {
+			logger.info("UserController.batchRemove() end");
+			return R.ok();
+		}
+		logger.info("UserController.batchRemove() end");
+		return R.error();
+	}
+
+	@RequiresPermissions("sys:user:resetPwd")
+	@Log("请求更改用户密码")
+	@GetMapping("/resetPwd/{id}")
+	String resetPwd(@PathVariable("id") Long userId, Model model) {
+		logger.info("UserController.resetPwd() start");
+		UserDO userDO = new UserDO();
+		userDO.setUserId(userId);
+		model.addAttribute("user", userDO);
+		logger.info("UserController.resetPwd() end");
+		return prefix + "/reset_pwd";
+	}
+
+	@Log("提交更改用户密码")
+	@PostMapping("/resetPwd")
+	@ResponseBody
+	R resetPwd(UserDO user) {
+		logger.info("UserController.resetPwd() start");
+		if (Constant.DEMO_ACCOUNT.equals(getUsername())) {
+			return R.error(1, "演示系统不允许修改,完整体验请部署程序");
+		}
+		try{
+			userService.resetPwd(user);
+			logger.info("UserController.resetPwd() end");
+			return R.ok();
+		}catch (Exception e){
+			return R.error(1,e.getMessage());
+		}
+
+	}
+	
+	@GetMapping("/tree")
+	@Log("获取产品机构树形图及用户列表数据")
+	@ResponseBody
+	public Tree<DeptDO> tree() {
+		logger.info("UserController.tree() start");
+		Tree<DeptDO> tree = new Tree<DeptDO>();
+		tree = userService.getTree();
+		logger.info("UserController.tree() end");
+		return tree;
+	}
+
+	@GetMapping("/treeView")
+	String treeView() {
+		return  prefix + "/userTree";
+	}
+
+	@GetMapping("/personal")
+	String personal(Model model) {
+		UserDO userDO  = userService.get(getUserId());
+		model.addAttribute("user",userDO);
+		model.addAttribute("hobbyList",dictService.getHobbyList(userDO));
+		model.addAttribute("sexList",dictService.getSexList());
+		return prefix + "/personal";
+	}
+	
+	@PostMapping("/exist")
+	@Log("判断用户是否存在")
+	@ResponseBody
+	boolean exit(@RequestParam Map<String, Object> params) throws MalformedURLException {
+		logger.info("UserController.exit() start");
+		logger.info("UserController.exit() end");
+		// 存在，不通过，false
+		return !userService.exist(params);
+	}
+}

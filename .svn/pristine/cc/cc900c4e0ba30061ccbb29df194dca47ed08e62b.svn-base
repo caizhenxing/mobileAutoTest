@@ -1,0 +1,282 @@
+package com.bmtc.system.service.impl;
+
+import java.util.*;
+
+import com.bmtc.common.domain.Tree;
+import com.bmtc.common.utils.BuildTree;
+import com.bmtc.common.utils.MD5Utils;
+import com.bmtc.system.dao.DeptDao;
+import com.bmtc.system.dao.UserDao;
+import com.bmtc.system.dao.UserRoleDao;
+import com.bmtc.system.domain.DeptDO;
+import com.bmtc.system.domain.UserDO;
+import com.bmtc.system.domain.UserRoleDO;
+import com.bmtc.system.service.UserService;
+import com.bmtc.system.vo.UserVO;
+
+import org.apache.commons.lang.ArrayUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * 用户管理service实现类
+ * 
+ * @author Administrator
+ *
+ */
+@Transactional
+@Service
+public class UserServiceImpl implements UserService {
+	private static final Logger logger = LoggerFactory
+			.getLogger(UserServiceImpl.class);
+
+	@Autowired
+	UserDao userMapper;
+	@Autowired
+	UserRoleDao userRoleMapper;
+	@Autowired
+	DeptDao deptMapper;
+	
+	/**
+	 * 通过用户id获取用户对象
+	 * @param id
+	 * @return
+	 */
+	@Override
+	public UserDO get(Long id) {
+		logger.info("UserServiceImpl.get() start");
+		//List<Long> roleIds = userRoleMapper.listRoleId(id);
+		UserDO user = userMapper.get(id);
+		//user.setDeptName(deptMapper.get(user.getDeptId()).getName());
+		//user.setRoleIds(roleIds);
+		logger.info("UserServiceImpl.get() start");
+		return user;
+	}
+	
+	/**
+	 * 查询用户数据
+	 * @param map
+	 * @return
+	 */
+	@Override
+	public List<UserDO> list(Map<String, Object> map) {
+		logger.info("UserServiceImpl.list() start");
+		logger.info("UserServiceImpl.list() end");
+		return userMapper.list(map);
+	}
+	
+	/**
+	 * 统计用户总数
+	 * @param map
+	 * @return
+	 */
+	@Override
+	public int count(Map<String, Object> map) {
+		logger.info("UserServiceImpl.count() start");
+		logger.info("UserServiceImpl.count() end");
+		return userMapper.count(map);
+	}
+	
+	/**
+	 * 保存用户数据
+	 * @param user
+	 * @return
+	 */
+	@Transactional
+	@Override
+	public int save(UserDO user) {
+		logger.info("UserServiceImpl.save() start");
+		// 保证user的birth字段不为null，避免个人资料部分的fromat null错误
+		if (user.getBirth() == null) {
+			user.setBirth(new Date());
+		}
+		user.setStatus(2);
+		int count = userMapper.save(user);
+		Long userId = user.getUserId();
+		// 注册和保存公用一个save()方法，注册默认给定角色为62
+		List<Long> roles = new ArrayList<Long>();
+		roles.add((long) 62);
+		userRoleMapper.removeByUserId(userId);
+		List<UserRoleDO> list = new ArrayList<>();
+		for (Long roleId : roles) {
+			UserRoleDO ur = new UserRoleDO();
+			ur.setUserId(userId);
+			ur.setRoleId(roleId);
+			list.add(ur);
+		}
+		if (list.size() > 0) {
+			userRoleMapper.batchSave(list);
+		}
+		logger.info("UserServiceImpl.save() end");
+		return count;
+	}
+	
+	/**
+	 * 更新用户数据
+	 * @param user
+	 * @return
+	 */
+	@Override
+	public int update(UserDO user) {
+		logger.info("UserServiceImpl.update() start");
+		int r = userMapper.update(user);
+		Long userId = user.getUserId();
+		List<Long> roles = user.getRoleIds();
+		userRoleMapper.removeByUserId(userId);
+		List<UserRoleDO> list = new ArrayList<>();
+		for (Long roleId : roles) {
+			UserRoleDO ur = new UserRoleDO();
+			ur.setUserId(userId);
+			ur.setRoleId(roleId);
+			list.add(ur);
+		}
+		if (list.size() > 0) {
+			userRoleMapper.batchSave(list);
+		}
+		logger.info("UserServiceImpl.update() end");
+		return r;
+	}
+	
+	/**
+	 * 通过用户id移除用户
+	 * @param userId
+	 * @return
+	 */
+	@Override
+	public int remove(Long userId) {
+		logger.info("UserServiceImpl.remove() start");
+		userRoleMapper.removeByUserId(userId);
+		logger.info("UserServiceImpl.remove() end");
+		return userMapper.remove(userId);
+	}
+	
+	/**
+	 * 判断用户是否存在
+	 * @param params
+	 * @return
+	 */
+	@Override
+	public boolean exist(Map<String, Object> params) {
+		logger.info("UserServiceImpl.exist() start");
+		boolean exist;
+		exist = userMapper.list(params).size() > 0;
+		logger.info("UserServiceImpl.exist() end");
+		return exist;
+	}
+	
+	/**
+	 * 重置密码
+	 * @param userVO
+	 * @param userDO
+	 * @return
+	 * @throws Exception
+	 */
+	@Override
+	public int resetPwd(UserVO userVO, UserDO userDO) throws Exception {
+		logger.info("UserServiceImpl.resetPwd() start");
+/*		if (Objects.equals(userVO.getUserDO().getUserId(), userDO.getUserId())) {
+			if (Objects.equals(
+					MD5Utils.encrypt(userDO.getUsername(), userVO.getPwdOld()),
+					userDO.getPassword())) {
+				
+				userDO.setPassword(MD5Utils.encrypt(userDO.getUsername(),
+						userVO.getPwdNew()));
+				logger.info("UserServiceImpl.resetPwd() end");
+				return userMapper.update(userDO);
+			} else {
+				throw new Exception("输入的旧密码有误！");
+			}
+		} else {
+			throw new Exception("你修改的不是你登录的账号！");
+		}*/
+		
+		if (Objects.equals(userVO.getUserDO().getUserId(), userDO.getUserId())) {
+			if (Objects.equals(MD5Utils.encryptPureMD5(userVO.getPwdOld()),
+					userDO.getPassword())) {
+				userDO.setPassword(MD5Utils.encryptPureMD5(userVO.getPwdNew()));
+				logger.info("UserServiceImpl.resetPwd() end");
+				return userMapper.update(userDO);
+			} else {
+				throw new Exception("输入的旧密码有误！");
+			}
+		} else {
+			throw new Exception("你修改的不是你登录的账号！");
+		}
+
+	}
+	
+	/**
+	 * 通过用户id批量移除用户
+	 * @param userIds
+	 * @return
+	 */
+	@Transactional
+	@Override
+	public int batchremove(Long[] userIds) {
+		logger.info("UserServiceImpl.batchremove() start");
+		int count = userMapper.batchRemove(userIds);
+		userRoleMapper.batchRemoveByUserId(userIds);
+		logger.info("UserServiceImpl.batchremove() end");
+		return count;
+	}
+	
+	/**
+	 * 产品机构树形图和用户列表相关联展示的数据组装
+	 * @return
+	 */
+	@Override
+	public Tree<DeptDO> getTree() {
+		logger.info("UserServiceImpl.getTree() start");
+		List<Tree<DeptDO>> trees = new ArrayList<Tree<DeptDO>>();
+		List<DeptDO> depts = deptMapper.list(new HashMap<String, Object>(16));
+		Long[] pDepts = deptMapper.listParentDept();
+		Long[] uDepts = userMapper.listAllDept();
+		Long[] allDepts = (Long[]) ArrayUtils.addAll(pDepts, uDepts);
+		for (DeptDO dept : depts) {
+			if (!ArrayUtils.contains(allDepts, dept.getDeptId())) {
+				continue;
+			}
+			Tree<DeptDO> tree = new Tree<DeptDO>();
+			tree.setId(dept.getDeptId().toString());
+			tree.setParentId(dept.getParentId().toString());
+			tree.setText(dept.getName());
+			Map<String, Object> state = new HashMap<>(16);
+			state.put("opened", true);
+			state.put("mType", "dept");
+			tree.setState(state);
+			trees.add(tree);
+		}
+		List<UserDO> users = userMapper.list(new HashMap<String, Object>(16));
+		for (UserDO user : users) {
+			Tree<DeptDO> tree = new Tree<DeptDO>();
+			tree.setId(user.getUserId().toString());
+			tree.setParentId(user.getDeptId().toString());
+			tree.setText(user.getName());
+			Map<String, Object> state = new HashMap<>(16);
+			state.put("opened", true);
+			state.put("mType", "user");
+			tree.setState(state);
+			trees.add(tree);
+		}
+		// 默认顶级菜单为０，根据数据库实际情况调整
+		Tree<DeptDO> t = BuildTree.build(trees);
+		logger.info("UserServiceImpl.getTree() end");
+		return t;
+	}
+	
+	/**
+	 * 更新个人资料
+	 * @param userDO
+	 * @return
+	 */
+	@Override
+	public int updatePersonal(UserDO userDO) {
+		logger.info("UserServiceImpl.updatePersonal() start");
+		logger.info("UserServiceImpl.updatePersonal() end");
+		return userMapper.update(userDO);
+	}
+
+}

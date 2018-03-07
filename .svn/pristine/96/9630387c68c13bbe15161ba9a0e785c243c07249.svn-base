@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+<head th:include="include :: header"></head>
+<body class="gray-bg">
+	<div class="row">
+		<div class="col-sm-12">
+			<div class="ibox float-e-margins">
+				<div class="ibox-content">
+					<input type="hidden" id="scriptId" name="scriptId" th:value="${scriptId}"/>
+					<!-- 脚本中国的caseName展示的div -->
+					<div class="form-group">
+						<div class="col-sm-8">
+							<div id="caseNameTree">
+							</div>
+							
+						</div>
+					</div>
+					
+				</div>
+			</div>
+		</div>
+	</div>
+	<div th:include="include::footer"></div>
+</body>
+<script type="text/javascript">
+	$(document).ready(function() {
+		var scriptId = $("#scriptId").val();
+		getTreeData(scriptId);
+	});
+	function getTreeData(scriptId) {
+		$.ajax({
+			type : "GET",
+			url : "/script/getCaseNameTree/" + scriptId,
+			success : function(tree) {
+				loadTree(tree);
+			}
+		});
+	}
+	function loadTree(tree) {
+		$('#caseNameTree').jstree({
+			'core' : {
+				'data' : tree
+			},
+		});
+		$('#caseNameTree').jstree().open_all();
+	}
+</script>
+</html>

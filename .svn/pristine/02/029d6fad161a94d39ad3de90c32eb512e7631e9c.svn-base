@@ -1,0 +1,44 @@
+host=127.0.0.1
+#svn脚本下载到本地workspace，子目录根据产品拼接，如：手机银行。 e:/workspace/mobileApp
+svn.local.path=e:/workspace/
+#windows系统配置
+#appium.bin=C:/Users/Administrator/AppData/Local/Programs/appium-desktop/resources/app/node_modules/appium/build/lib/main.js
+#appium.kill=cmd /c taskkill /pid PID /F
+#port.pid=cmd /c netstat -ano | findstr port
+#node=node
+#auto.log=d:/log
+#rf.bin=pybot
+#
+#android.device.udid=adb devices
+#android.device.verison=adb -s udid shell getprop ro.build.version.release
+#android.device.resolution=adb -s udid shell wm size
+#android.device.model=adb -s udid shell getprop ro.product.model
+#android.device.brand=adb -s udid shell getprop ro.product.manufacturer
+#android.device.status=cmd /c adb -s udid shell ps |findstr "io.appium.uiautomator"
+
+#mac系统配置
+
+appium.bin=/usr/local/bin/appium
+appium.kill=kill -9 PID
+port.pid=lsof -i :port | awk '{print $2}' | sed -n 2p
+node=/usr/local/bin/node
+auto.log=/tmp/log/
+rf.bin=/usr/local/bin/pybot
+
+#android
+android.device.udid=/usr/local/sdk/platform-tools/adb devices
+android.device.verison=/usr/local/sdk/platform-tools/adb -s udid shell getprop ro.build.version.release
+android.device.resolution=/usr/local/sdk/platform-tools/adb -s udid shell wm size
+android.device.model=/usr/local/sdk/platform-tools/adb -s udid shell getprop ro.product.model
+android.device.brand=/usr/local/sdk/platform-tools/adb -s udid shell getprop ro.product.manufacturer
+android.device.status=/usr/local/sdk/platform-tools/adb -s udid shell ps |grep "io.appium.uiautomator"
+
+#IOS 获取设备信息
+ios.device.udid=/usr/local/bin/ios-deploy -c --no-wifi | awk '{if(NR!=1)print $3}'
+ios.device.info=/usr/local/bin/ideviceinfo -u udid
+ios.device.version=/usr/local/bin/ideviceinfo -k ProductVersion -u udid
+ios.device.ProductType=/usr/local/bin/ideviceinfo -k ProductType -u udid
+ios.device.status=ps -ef |grep udid
+
+
+

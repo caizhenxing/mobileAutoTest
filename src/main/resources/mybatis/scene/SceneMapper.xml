@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.bmtc.scene.dao.SceneDao">
+	<resultMap type="com.bmtc.scene.domain.Scene" id = "rScene">
+		<id property = "sceneId" column = "scene_id"/>
+		<result property = "sceneName" column = "scene_name" />
+		<result property = "status" column = "status" />
+		<result property = "updateUserId" column = "last_modified" />
+		<result property = "createUserId" column = "user_id_create" />
+		<result property = "gmtCreate" column = "gmt_create" />
+		<result property = "gmtModified" column = "gmt_modified" />
+		<result property = "testDataPaths" column = "test_data" />
+	</resultMap>
+	
+	<select id="get" resultType="com.bmtc.scene.domain.Scene" resultMap="rScene">
+		select
+		`scene_id`,
+		`scene_name`,
+		`status`,
+		`last_modified`,
+		`user_id_create`,
+		`gmt_create`,
+		`gmt_modified`,
+		`test_data`
+		from test_scene 
+		where 
+		scene_id = #{value}
+	</select>
+
+	<select id="list" resultType="com.bmtc.scene.domain.Scene">
+		select
+		`scene_id`,`scene_name`,`status`,`last_modified`,`user_id_create`,`gmt_create`,`gmt_modified`,`test_data`
+		from test_scene
+		<where>
+			<if test="sceneId != null and sceneId != ''"> and scene_id = #{sceneId} </if>
+			<if test="sceneName != null and sceneName != ''"> and scene_name = #{sceneName} </if>
+			<if test="status != null and status != ''"> and Organ_id = #{status} </if>
+			<if test="updateUserId != null and updateUserId != ''"> and last_modified = #{updateUserId} </if>
+			<if test="createUserId != null and createUserId != ''"> and user_id_create = #{createUserId} </if>
+			<if test="gmtCreate != null and gmtCreate != ''"> and gmt_create = #{gmtCreate} </if>
+			<if test="gmtModified != null and gmtModified != ''"> and gmt_modified = #{gmtModified} </if>
+			<if test="testDataPaths != null and testDataPaths != ''"> and test_data = #{testDataPaths} </if>
+		</where>
+		<choose>
+			<when test="sort != null and sort.trim() != ''">
+				order by ${sort} ${order}
+			</when>
+			<otherwise>
+				order by scene_id desc
+			</otherwise>
+		</choose>
+		<if test="offset != null and limit != null">
+			limit #{offset}, #{limit}
+		</if>
+	</select>
+
+	<select id="count" resultType="int">
+		select count(*) from test_scene
+		<where>
+			<if test="sceneId != null and sceneId != ''"> and scene_id = #{sceneId} </if>
+			<if test="sceneName != null and sceneName != ''"> and scene_name = #{sceneName} </if>
+			<if test="status != null and status != ''"> and status = #{status} </if>
+			<if test="updateUserId != null and updateUserId != ''"> and last_modified = #{updateUserId} </if>
+			<if test="createUserId != null and createUserId != ''"> and user_id_create = #{createUserId} </if>
+			<if test="gmtCreate != null and gmtCreate != ''"> and gmt_create = #{gmtCreate} </if>
+			<if test="gmtModified != null and gmtModified != ''"> and gmt_modified = #{gmtModified} </if>
+			<if test="testDataPaths != null and testDataPaths != ''"> and test_data = #{testDataPaths} </if>
+		</where>
+	</select>
+
+	<insert id="save" parameterType="com.bmtc.scene.domain.Scene"
+		useGeneratedKeys="true" keyProperty="sceneId">
+		insert into test_scene
+		(
+		`scene_name`,
+		`status`,
+		`last_modified`,
+		`user_id_create`,
+		`gmt_create`,
+		`gmt_modified`,
+		`test_data`
+		)
+		values
+		(
+		#{sceneName},
+		#{status},
+		#{updateUserId},
+		#{createUserId},
+		#{gmtCreate},
+		#{gmtModified},
+		#{testDataPaths}
+		)
+	</insert>
+
+	<update id="update" parameterType="com.bmtc.scene.domain.Scene">
+		update test_scene
+		<set>
+			<if test="sceneName != null">`scene_name` = #{sceneName}, </if>
+			<if test="status != null">`status` = #{status}, </if>
+			<if test="updateUserId != null">`last_modified` = #{updateUserId}, </if>
+			<if test="createUserId != null">`user_id_create` = #{createUserId}, </if>
+			<if test="gmtCreate != null">`gmt_create` = #{gmtCreate}, </if>
+			<if test="gmtModified != null">`gmt_modified` = #{gmtModified}</if>
+			<if test="testDataPaths != null">`test_data` = #{testDataPaths}</if>
+		</set>
+		where scene_id = #{sceneId}
+	</update>
+
+	<delete id="remove">
+		delete from test_scene where scene_id = #{value}
+	</delete>
+
+	<delete id="batchRemove">
+		delete from test_scene where scene_id in
+		<foreach item="sceneId" collection="array" open="(" separator=","
+			close=")">
+			#{sceneId}
+		</foreach>
+	</delete>
+
+</mapper>

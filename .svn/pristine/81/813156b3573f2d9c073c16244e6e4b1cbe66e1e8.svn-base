@@ -1,0 +1,57 @@
+package com.bmtc.system.controller;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.bmtc.common.annotation.Log;
+import com.bmtc.common.config.Constant;
+import com.bmtc.common.controller.BaseController;
+import com.bmtc.common.utils.MD5Utils;
+import com.bmtc.common.utils.R;
+import com.bmtc.system.domain.UserDO;
+import com.bmtc.system.service.UserService;
+
+@Controller
+public class RegisterController extends BaseController {
+	private static final Logger logger = LoggerFactory
+			.getLogger(RegisterController.class);
+	
+	@Autowired
+	UserService userService;
+	
+	@Log("访问注册页")
+	@GetMapping("/register")
+	String register() {
+		logger.info("RegisterController.register() start");
+		logger.info("RegisterController.register() end");
+		return "register";
+	}
+	
+	@Log("保存用户")
+	@PostMapping("/save")
+	@ResponseBody
+	R save(UserDO user) {
+		logger.info("RegisterController.save() start");
+		if (Constant.DEMO_ACCOUNT.equals(getUsername())) {
+			return R.error(1, "演示系统不允许修改,完整体验请部署程序");
+		}
+		//user.setPassword(MD5Utils.encrypt(user.getUsername(), user.getPassword()));
+		try {
+			user.setPassword(MD5Utils.encryptPureMD5(user.getPassword()));
+		} catch (Exception e) {
+			e.printStackTrace();
+			return R.error("计算密码的MD5值错误");
+		}
+		if (userService.save(user) > 0) {
+			logger.info("RegisterController.save() end");
+			return R.ok();
+		}
+		logger.info("RegisterController.save() end");
+		return R.error();
+	}
+}
